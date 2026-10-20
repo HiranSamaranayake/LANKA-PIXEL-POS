@@ -1,262 +1,240 @@
 import React, { useState } from 'react';
-import {
-  Search,
-  PlusCircle,
-} from 'lucide-react';
-import type { ExpenseTransaction, OverallCalculations, UserRole } from '../../types';
-import { formatLKR, formatDate } from '../../utils/formatters';
+import { PlusCircle, Search, Edit2, Trash2, Calendar, TrendingDown } from 'lucide-react';
+import type { ExpenseRecord, UserRole } from '../../types';
+import { EXPENSE_CATEGORIES } from './AddExpenseModal';
+import { formatLKR, formatDate, getColomboToday, getCurrentMonthString } from '../../utils/formatters';
 
 interface ExpensesViewProps {
-  expenses: ExpenseTransaction[];
-  calculations: OverallCalculations;
+  expenses: ExpenseRecord[];
   currentRole: UserRole;
-  referenceDate: string;
   onOpenAddExpense: () => void;
-  onDeleteExpense: (id: string) => void;
+  onEditExpense: (expense: ExpenseRecord) => void;
+  onDeleteExpense: (id: string) => Promise<void>;
 }
 
 export const ExpensesView: React.FC<ExpensesViewProps> = ({
   expenses,
-  calculations,
   currentRole,
-  referenceDate,
   onOpenAddExpense,
+  onEditExpense,
   onDeleteExpense,
 }) => {
+  const todayStr = getColomboToday();
+  const currentMonthStr = getCurrentMonthString();
+
+  const [filterDate, setFilterDate] = useState<string>('');
+  const [filterCategory, setFilterCategory] = useState<string>('All');
   const [searchTerm, setSearchTerm] = useState('');
-  const [categoryFilter, setCategoryFilter] = useState('All');
-  const [timeFilter, setTimeFilter] = useState<'all' | 'daily' | 'weekly' | 'monthly'>('all');
 
-  const filteredExpenses = expenses.filter((exp) => {
+  // 1. Calculate Daily Expenses for active date (or today if none chosen)
+  const activeDate = filterDate || todayStr;
+  const dailyExpenses = expenses.filter((e) => e.date === activeDate);
+  const dailyTotal = dailyExpenses.reduce((acc, curr) => acc + curr.amount, 0);
+
+  // 2. Calculate Monthly Expenses for current month
+  const monthlyExpenses = expenses.filter((e) => e.date.startsWith(currentMonthStr));
+  const monthlyTotal = monthlyExpenses.reduce((acc, curr) => acc + curr.amount, 0);
+
+  // Filtered list for the table
+  const filteredList = expenses.filter((item) => {
+    const matchesDate = filterDate ? item.date === filterDate : true;
+    const matchesCat =
+      filterCategory === 'All' ? true : item.category === filterCategory;
     const matchesSearch =
-      exp.vendor.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      exp.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      exp.receiptRef.toLowerCase().includes(searchTerm.toLowerCase());
-
-    const matchesCategory = categoryFilter === 'All' || exp.category === categoryFilter;
-
-    let matchesTime = true;
-    if (timeFilter === 'daily') {
-      matchesTime = exp.date === referenceDate;
-    } else if (timeFilter === 'weekly') {
-      const refTime = new Date(referenceDate).getTime();
-      const expTime = new Date(exp.date).getTime();
-      const diffDays = (refTime - expTime) / (1000 * 60 * 60 * 24);
-      matchesTime = diffDays >= 0 && diffDays < 7;
-    } else if (timeFilter === 'monthly') {
-      const [y1, m1] = exp.date.split('-');
-      const [y2, m2] = referenceDate.split('-');
-      matchesTime = y1 === y2 && m1 === m2;
-    }
-
-    return matchesSearch && matchesCategory && matchesTime;
+      item.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      item.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      item.recorded_by.toLowerCase().includes(searchTerm.toLowerCase());
+    return matchesDate && matchesCat && matchesSearch;
   });
 
-  const totalFilteredAmount = filteredExpenses.reduce((acc, curr) => acc + curr.amount, 0);
+  const handleDelete = async (id: string) => {
+    if (window.confirm('Are you sure you want to delete this expense record?')) {
+      await onDeleteExpense(id);
+    }
+  };
 
   return (
     <div className="space-y-6">
-      {/* Three expenses calculation stat cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      {/* Summary Cards: Daily & Monthly Expenses */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {/* Daily Expenses */}
-        <div className="rounded-2xl border border-slate-800 bg-[#0c121e] p-5">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">
-              Daily Total Expenses
+        <div className="bg-white p-5 rounded-xl border border-[#E5E7EB] shadow-2xs">
+          <div className="flex items-center justify-between text-xs text-gray-500 mb-1">
+            <span className="font-semibold">
+              {filterDate ? `Expenses for ${formatDate(filterDate)}` : `Today's Total Expenses`}
             </span>
-            <span className="text-[10px] px-2 py-0.5 rounded-full bg-rose-500/10 text-rose-400 border border-rose-500/20 font-semibold">
-              Today
-            </span>
-          </div>
-          <div className="text-2xl font-black text-white">
-            {formatLKR(calculations.daily.expenses)}
-          </div>
-          <p className="text-[11px] text-slate-400 mt-2">
-            Operational spending settled on {formatDate(referenceDate)}
-          </p>
-        </div>
-
-        {/* Weekly Expenses */}
-        <div className="rounded-2xl border border-slate-800 bg-[#0c121e] p-5">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">
-              Weekly Total Expenses
-            </span>
-            <span className="text-[10px] px-2 py-0.5 rounded-full bg-rose-500/10 text-rose-400 border border-rose-500/20 font-semibold">
-              7-Day Window
+            <span className="p-1 rounded-md bg-gray-100 text-gray-700 font-bold text-[10px]">
+              {dailyExpenses.length} Records
             </span>
           </div>
-          <div className="text-2xl font-black text-white">
-            {formatLKR(calculations.weekly.expenses)}
+          <div className="text-2xl font-bold text-[#111827] mt-1">
+            {formatLKR(dailyTotal)}
           </div>
-          <p className="text-[11px] text-slate-400 mt-2">
-            7-day rolling studio overhead and operational expenses
+          <p className="text-[11px] text-gray-400 mt-1">
+            Total operational costs on this date
           </p>
         </div>
 
         {/* Monthly Expenses */}
-        <div className="rounded-2xl border border-slate-800 bg-[#0c121e] p-5">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">
-              Monthly Total Expenses
-            </span>
-            <span className="text-[10px] px-2 py-0.5 rounded-full bg-rose-500/10 text-rose-400 border border-rose-500/20 font-semibold">
-              October 2026
-            </span>
+        <div className="bg-white p-5 rounded-xl border border-[#E5E7EB] shadow-2xs">
+          <div className="flex items-center justify-between text-xs text-gray-500 mb-1">
+            <span className="font-semibold">Current Month Total Expenses</span>
+            <Calendar className="h-4 w-4 text-[#2563EB]" />
           </div>
-          <div className="text-2xl font-black text-slate-200">
-            {formatLKR(calculations.monthly.expenses)}
+          <div className="text-2xl font-bold text-[#111827] mt-1">
+            {formatLKR(monthlyTotal)}
           </div>
-          <p className="text-[11px] text-slate-400 mt-2">
-            Accumulated monthly operational expenditure
+          <p className="text-[11px] text-gray-400 mt-1">
+            Accumulated MTD overhead ({monthlyExpenses.length} records)
           </p>
+        </div>
+
+        {/* Quick Add Card */}
+        <div className="bg-[#EFF6FF] p-5 rounded-xl border border-blue-100 flex flex-col justify-between">
+          <div>
+            <h4 className="text-xs font-bold text-[#2563EB] mb-1">Record Expense</h4>
+            <p className="text-xs text-gray-600">
+              Log studio utilities, software subscriptions, ads, or hardware costs.
+            </p>
+          </div>
+          <button
+            onClick={onOpenAddExpense}
+            className="mt-3 inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[#60A5FA] hover:bg-blue-500 text-white font-bold text-xs transition-colors shadow-2xs self-start"
+          >
+            <PlusCircle className="h-4 w-4" />
+            <span>Record New Expense</span>
+          </button>
         </div>
       </div>
 
-      {/* Controls & Filter Bar */}
-      <div className="rounded-2xl border border-slate-800 bg-[#0c121e] p-4 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+      {/* Filter and Search Bar */}
+      <div className="bg-white p-4 rounded-xl border border-[#E5E7EB] shadow-2xs flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 text-xs">
         {/* Search */}
         <div className="relative flex-1">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
           <input
             type="text"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="Search vendor, receipt reference, or purpose..."
-            className="w-full pl-10 pr-4 py-2 rounded-xl bg-slate-900 border border-slate-800 text-white placeholder-slate-500 text-xs focus:outline-none focus:border-blue-500"
+            placeholder="Search description, category, or recorded by..."
+            className="w-full pl-9 pr-3 py-2 rounded-lg border border-[#E5E7EB] text-xs text-[#111827] placeholder-gray-400 focus:outline-none focus:border-[#60A5FA]"
           />
         </div>
 
-        {/* Filters */}
+        {/* Category & Date Filters */}
         <div className="flex flex-wrap items-center gap-2">
-          {/* Timeframe pill selector */}
-          <div className="flex items-center p-1 rounded-xl bg-slate-900 border border-slate-800 text-xs">
-            {(['all', 'daily', 'weekly', 'monthly'] as const).map((period) => (
-              <button
-                key={period}
-                onClick={() => setTimeFilter(period)}
-                className={`px-2.5 py-1 rounded-lg capitalize font-medium transition-all ${
-                  timeFilter === period
-                    ? 'bg-blue-600 text-white shadow-sm'
-                    : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                {period}
-              </button>
-            ))}
-          </div>
-
           <select
-            value={categoryFilter}
-            onChange={(e) => setCategoryFilter(e.target.value)}
-            className="px-3 py-2 rounded-xl bg-slate-900 border border-slate-800 text-white text-xs focus:outline-none focus:border-blue-500"
+            value={filterCategory}
+            onChange={(e) => setFilterCategory(e.target.value)}
+            className="px-3 py-2 rounded-lg border border-[#E5E7EB] text-xs text-[#111827] focus:outline-none focus:border-[#60A5FA]"
           >
             <option value="All">All Categories</option>
-            <option value="Software & Subscriptions">Software & Subscriptions</option>
-            <option value="Office & Utilities">Office & Utilities</option>
-            <option value="Hardware & Equipment">Hardware & Equipment</option>
-            <option value="Freelance Contractors">Freelance Contractors</option>
-            <option value="Internet & Communication">Internet & Communication</option>
-            <option value="Office Welfare & Refreshments">Office Welfare & Refreshments</option>
-            <option value="Logistics & Courier">Logistics & Courier</option>
-            <option value="Legal & Compliance">Legal & Compliance</option>
+            {EXPENSE_CATEGORIES.map((cat) => (
+              <option key={cat} value={cat}>
+                {cat}
+              </option>
+            ))}
           </select>
 
-          {currentRole !== 'Designer' && (
-            <button
-              onClick={onOpenAddExpense}
-              className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white border border-slate-700 text-xs font-semibold shadow-md transition-all active:scale-95"
-            >
-              <PlusCircle className="h-4 w-4 text-rose-400" />
-              <span>Record Expense</span>
-            </button>
-          )}
+          <div className="flex items-center gap-1.5">
+            <input
+              type="date"
+              value={filterDate}
+              onChange={(e) => setFilterDate(e.target.value)}
+              className="px-3 py-2 rounded-lg border border-[#E5E7EB] text-xs text-[#111827] focus:outline-none focus:border-[#60A5FA]"
+            />
+            {filterDate && (
+              <button
+                onClick={() => setFilterDate('')}
+                className="px-2.5 py-2 rounded-lg border border-[#E5E7EB] text-xs text-gray-500 hover:text-gray-800 hover:bg-gray-50 font-medium"
+              >
+                Clear
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
       {/* Expenses Table */}
-      <div className="rounded-2xl border border-slate-800 bg-[#0c121e] overflow-hidden shadow-xl">
-        <div className="p-4 border-b border-slate-800/80 flex items-center justify-between bg-slate-900/30">
+      <div className="bg-white rounded-xl border border-[#E5E7EB] shadow-2xs overflow-hidden">
+        <div className="px-5 py-4 border-b border-[#E5E7EB] flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <span className="text-xs font-bold text-white uppercase tracking-wider">
-              Expense Vouchers & Outflows ({filteredExpenses.length})
-            </span>
+            <TrendingDown className="h-4 w-4 text-gray-600" />
+            <h4 className="text-xs font-bold text-[#111827] uppercase tracking-wider">
+              Expense Records ({filteredList.length})
+            </h4>
           </div>
-          <div className="text-xs text-slate-300 font-semibold">
+          <div className="text-xs text-gray-500">
             Filtered Subtotal:{' '}
-            <span className="text-rose-400 font-bold">{formatLKR(totalFilteredAmount)}</span>
+            <span className="font-bold text-[#111827]">
+              {formatLKR(filteredList.reduce((acc, curr) => acc + curr.amount, 0))}
+            </span>
           </div>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
-            <thead className="bg-slate-900/60 text-slate-400 uppercase font-semibold border-b border-slate-800">
-              <tr>
-                <th className="px-4 py-3">Receipt & Date</th>
-                <th className="px-4 py-3">Vendor & Description</th>
-                <th className="px-4 py-3">Category</th>
-                <th className="px-4 py-3">Payment Method</th>
-                <th className="px-4 py-3">Approved By</th>
-                <th className="px-4 py-3 text-right">Amount (LKR)</th>
-                <th className="px-4 py-3 text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-800/60 text-slate-300">
-              {filteredExpenses.length === 0 ? (
+        {filteredList.length === 0 ? (
+          <div className="text-center py-12 text-xs text-gray-400">
+            No expense records found matching your filters.
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs">
+              <thead className="bg-gray-50 text-gray-500 uppercase text-[11px] font-semibold border-b border-[#E5E7EB]">
                 <tr>
-                  <td colSpan={7} className="px-4 py-8 text-center text-slate-500 text-xs">
-                    No expense records found matching your filters.
-                  </td>
+                  <th className="px-5 py-3">Date</th>
+                  <th className="px-5 py-3">Category</th>
+                  <th className="px-5 py-3">Description</th>
+                  <th className="px-5 py-3">Recorded By</th>
+                  <th className="px-5 py-3 text-right">Amount (LKR)</th>
+                  <th className="px-5 py-3 text-right">Actions</th>
                 </tr>
-              ) : (
-                filteredExpenses.map((exp) => (
-                  <tr key={exp.id} className="hover:bg-slate-900/50 transition-colors">
-                    <td className="px-4 py-3.5">
-                      <div className="font-mono font-bold text-white">{exp.receiptRef}</div>
-                      <div className="text-[10px] text-slate-400 mt-0.5">{formatDate(exp.date)}</div>
+              </thead>
+              <tbody className="divide-y divide-[#E5E7EB] text-gray-700">
+                {filteredList.map((exp) => (
+                  <tr key={exp.id} className="hover:bg-gray-50/80 transition-colors">
+                    <td className="px-5 py-3 whitespace-nowrap font-medium text-gray-900">
+                      {formatDate(exp.date)}
                     </td>
-
-                    <td className="px-4 py-3.5 max-w-[220px]">
-                      <div className="font-semibold text-white truncate">{exp.vendor}</div>
-                      <div className="text-[11px] text-slate-400 truncate mt-0.5">
-                        {exp.description}
-                      </div>
-                    </td>
-
-                    <td className="px-4 py-3.5">
-                      <span className="inline-block px-2.5 py-0.5 rounded-full bg-slate-800/80 text-slate-300 border border-slate-700/80 text-[11px]">
+                    <td className="px-5 py-3 whitespace-nowrap">
+                      <span className="inline-block px-2.5 py-0.5 rounded-full bg-gray-100 text-gray-800 text-[11px] font-semibold">
                         {exp.category}
                       </span>
                     </td>
-
-                    <td className="px-4 py-3.5">
-                      <span className="text-slate-300">{exp.paymentMethod}</span>
+                    <td className="px-5 py-3 text-[#111827] max-w-[280px]">
+                      {exp.description}
                     </td>
-
-                    <td className="px-4 py-3.5 text-slate-400">
-                      {exp.approvedBy}
+                    <td className="px-5 py-3 text-gray-500 whitespace-nowrap">
+                      {exp.recorded_by}
                     </td>
-
-                    <td className="px-4 py-3.5 text-right font-extrabold text-slate-200">
-                      -{formatLKR(exp.amount)}
+                    <td className="px-5 py-3 text-right font-bold text-[#111827] whitespace-nowrap">
+                      {formatLKR(exp.amount)}
                     </td>
-
-                    <td className="px-4 py-3.5 text-right">
-                      {currentRole === 'Admin' && (
+                    <td className="px-5 py-3 text-right whitespace-nowrap">
+                      <div className="flex items-center justify-end gap-1">
                         <button
-                          onClick={() => onDeleteExpense(exp.id)}
-                          className="text-slate-500 hover:text-rose-400 text-[11px] font-medium transition-colors"
+                          onClick={() => onEditExpense(exp)}
+                          className="p-1 rounded text-gray-500 hover:text-blue-600 hover:bg-blue-50 transition-colors"
+                          title="Edit Expense"
                         >
-                          Remove
+                          <Edit2 className="h-3.5 w-3.5" />
                         </button>
-                      )}
+                        {currentRole === 'Admin' && (
+                          <button
+                            onClick={() => handleDelete(exp.id)}
+                            className="p-1 rounded text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                            title="Delete Expense"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
     </div>
   );

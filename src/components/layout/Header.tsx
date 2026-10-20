@@ -1,166 +1,116 @@
 import React from 'react';
-import {
-  Calendar,
-  PlusCircle,
-  ShieldCheck,
-  Headphones,
-  Brush,
-  Layers,
-} from 'lucide-react';
+import { Calendar, Database, ShieldCheck, Headphones, Brush } from 'lucide-react';
 import type { NavigationModule, UserRole } from '../../types';
-import { formatDate } from '../../utils/formatters';
+import { formatDate, getColomboToday } from '../../utils/formatters';
+import { useAuth } from '../../context/AuthContext';
 
 interface HeaderProps {
   currentModule: NavigationModule;
   currentRole: UserRole;
-  onRoleChange: (role: UserRole) => void;
-  referenceDate: string;
-  onOpenAddIncome: () => void;
-  onOpenAddExpense: () => void;
-  onOpenLogOutput: () => void;
+  onOpenSetup: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
   currentModule,
   currentRole,
-  onRoleChange,
-  referenceDate,
-  onOpenAddIncome,
-  onOpenAddExpense,
-  onOpenLogOutput,
+  onOpenSetup,
 }) => {
-  const getModuleTitle = () => {
+  const { isConfigured } = useAuth();
+  const todayStr = getColomboToday();
+
+  const getModuleMeta = () => {
     switch (currentModule) {
       case 'dashboard':
         return {
-          title: 'Executive Overview',
-          subtitle: 'Real-time financial performance, operational net, and studio output',
+          title: `${currentRole} Dashboard`,
+          subtitle:
+            currentRole === 'Admin'
+              ? 'Real-time financial performance and company operations summary'
+              : currentRole === 'Call Center Operator'
+              ? 'Client income inflows and daily receipts summary'
+              : 'Your daily graphic design completed output record',
         };
       case 'income':
         return {
-          title: 'Income Management',
-          subtitle: 'Track invoices, client settlements, and revenue streams',
+          title: 'Daily Income Management',
+          subtitle: 'Record and track client income, service fees, and daily receipts',
+        };
+      case 'posts':
+        return {
+          title: 'Daily Post Count',
+          subtitle: 'Track completed graphic design posts per creative designer',
         };
       case 'expenses':
         return {
           title: 'Operational Expenses',
-          subtitle: 'Studio overhead, subscriptions, utilities, and contractor disbursements',
+          subtitle: 'Track studio overhead, utilities, salaries, and operating disbursements',
+        };
+      case 'reports':
+        return {
+          title: 'Monthly Financial Reports',
+          subtitle: 'Consolidated operational net calculation (Income − Expenses) and statistics',
         };
       case 'staff':
         return {
           title: 'Staff Management',
-          subtitle: 'Team roster, departmental distribution, and role management',
-        };
-      case 'designer-performance':
-        return {
-          title: 'Designer Performance & Output',
-          subtitle: 'Daily completed graphic posts and video productions per designer',
-        };
-      case 'reports':
-        return {
-          title: 'Reports & Analytics',
-          subtitle: 'Consolidated financial summaries, operational margin, and output metrics',
+          subtitle: 'Manage employee accounts, assign roles, and configure system permissions',
         };
       case 'settings':
         return {
-          title: 'Company Settings',
-          subtitle: 'Corporate profile, system configurations, and permissions',
+          title: 'System Settings',
+          subtitle: 'Company registration details, profile preferences, and database status',
         };
     }
   };
 
-  const { title, subtitle } = getModuleTitle();
+  const { title, subtitle } = getModuleMeta();
+
+  const getRoleIcon = () => {
+    switch (currentRole) {
+      case 'Admin':
+        return <ShieldCheck className="h-3.5 w-3.5 text-[#2563EB]" />;
+      case 'Call Center Operator':
+        return <Headphones className="h-3.5 w-3.5 text-[#2563EB]" />;
+      case 'Designer':
+        return <Brush className="h-3.5 w-3.5 text-[#2563EB]" />;
+    }
+  };
 
   return (
-    <header className="sticky top-0 z-30 flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-800/80 bg-[#070a12]/90 backdrop-blur-md px-6 py-4">
-      {/* Module Title */}
+    <header className="bg-white border-b border-[#E5E7EB] px-6 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 sticky top-0 z-20">
       <div>
-        <h2 className="text-xl font-bold text-white tracking-tight flex items-center gap-2">
-          {title}
-        </h2>
-        <p className="text-xs text-slate-400 mt-0.5">{subtitle}</p>
+        <h2 className="text-lg font-bold text-[#111827] tracking-tight">{title}</h2>
+        <p className="text-xs text-gray-500 mt-0.5">{subtitle}</p>
       </div>
 
-      {/* Controls & Role Selector & Quick Actions */}
       <div className="flex flex-wrap items-center gap-3">
-        {/* Date Badge */}
-        <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-800 text-xs text-slate-300">
-          <Calendar className="h-3.5 w-3.5 text-blue-400" />
-          <span>{formatDate(referenceDate)}</span>
+        {/* Date Display */}
+        <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gray-50 border border-[#E5E7EB] text-xs text-gray-700 font-medium">
+          <Calendar className="h-3.5 w-3.5 text-gray-400" />
+          <span>{formatDate(todayStr)}</span>
         </div>
 
-        {/* Role Switcher Pill Group */}
-        <div className="flex items-center p-1 rounded-xl bg-slate-900/90 border border-slate-800 text-xs">
-          <span className="px-2 text-[11px] font-semibold text-slate-500 uppercase flex items-center gap-1">
-            <Layers className="h-3 w-3 text-blue-400" />
-            Role:
+        {/* Role Badge */}
+        <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#EFF6FF] border border-blue-200 text-xs text-[#2563EB] font-semibold">
+          {getRoleIcon()}
+          <span>{currentRole}</span>
+        </div>
+
+        {/* Database Connection Pill */}
+        <button
+          onClick={onOpenSetup}
+          className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-medium transition-colors ${
+            isConfigured
+              ? 'bg-white border-[#E5E7EB] text-gray-600 hover:bg-gray-50'
+              : 'bg-amber-50 border-amber-200 text-amber-800 hover:bg-amber-100'
+          }`}
+          title="Supabase Database Configuration"
+        >
+          <Database className={`h-3.5 w-3.5 ${isConfigured ? 'text-blue-500' : 'text-amber-600'}`} />
+          <span className="text-[11px] font-semibold">
+            {isConfigured ? 'Supabase Connected' : 'Configure Supabase'}
           </span>
-          <button
-            onClick={() => onRoleChange('Admin')}
-            className={`flex items-center gap-1 px-2.5 py-1 rounded-lg font-medium transition-all ${
-              currentRole === 'Admin'
-                ? 'bg-blue-600 text-white shadow-sm'
-                : 'text-slate-400 hover:text-white'
-            }`}
-          >
-            <ShieldCheck className="h-3.5 w-3.5" />
-            Admin
-          </button>
-          <button
-            onClick={() => onRoleChange('Call Center Operator')}
-            className={`flex items-center gap-1 px-2.5 py-1 rounded-lg font-medium transition-all ${
-              currentRole === 'Call Center Operator'
-                ? 'bg-blue-600 text-white shadow-sm'
-                : 'text-slate-400 hover:text-white'
-            }`}
-          >
-            <Headphones className="h-3.5 w-3.5" />
-            Call Center
-          </button>
-          <button
-            onClick={() => onRoleChange('Designer')}
-            className={`flex items-center gap-1 px-2.5 py-1 rounded-lg font-medium transition-all ${
-              currentRole === 'Designer'
-                ? 'bg-blue-600 text-white shadow-sm'
-                : 'text-slate-400 hover:text-white'
-            }`}
-          >
-            <Brush className="h-3.5 w-3.5" />
-            Designer
-          </button>
-        </div>
-
-        {/* Quick Action Buttons */}
-        <div className="flex items-center gap-2">
-          <button
-            onClick={onOpenAddIncome}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold shadow-md shadow-blue-600/20 transition-all active:scale-95"
-            title="Record New Income Transaction"
-          >
-            <PlusCircle className="h-3.5 w-3.5" />
-            <span>+ Income</span>
-          </button>
-
-          {currentRole !== 'Designer' && (
-            <button
-              onClick={onOpenAddExpense}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-semibold transition-all active:scale-95"
-              title="Record Operational Expense"
-            >
-              <PlusCircle className="h-3.5 w-3.5 text-rose-400" />
-              <span>+ Expense</span>
-            </button>
-          )}
-
-          <button
-            onClick={onOpenLogOutput}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-950/80 hover:bg-indigo-900 text-indigo-300 border border-indigo-800/60 text-xs font-semibold transition-all active:scale-95"
-            title="Log Daily Graphic/Video Output"
-          >
-            <Brush className="h-3.5 w-3.5 text-indigo-400" />
-            <span>+ Log Output</span>
-          </button>
-        </div>
+        </button>
       </div>
     </header>
   );

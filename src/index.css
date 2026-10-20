@@ -1,41 +1,38 @@
 @import "tailwindcss";
 
 @layer base {
-  * {
-    border-color: #1e293b;
+  :root {
+    --bg-main: #FFFFFF;
+    --text-main: #111827;
+    --primary-blue: #60A5FA;
+    --light-blue-bg: #EFF6FF;
+    --border-grey: #E5E7EB;
   }
+
+  * {
+    border-color: #E5E7EB;
+  }
+
   body {
-    background-color: #07090e;
-    color: #f8fafc;
-    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+    background-color: #FFFFFF;
+    color: #111827;
+    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    -webkit-font-smoothing: antialiased;
   }
 }
 
-/* Custom scrollbars */
+/* Clean, simple scrollbars */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: #090d16;
+  background: #F9FAFB;
 }
 ::-webkit-scrollbar-thumb {
-  background: #1e293b;
+  background: #D1D5DB;
   border-radius: 9999px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #2563eb;
-}
-
-/* Subtle glow utilities */
-.glow-blue {
-  box-shadow: 0 0 25px -5px rgba(37, 99, 235, 0.3);
-}
-
-.glow-blue-sm {
-  box-shadow: 0 0 15px -3px rgba(37, 99, 235, 0.2);
-}
-
-.glow-card {
-  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.05);
+  background: #9CA3AF;
 }

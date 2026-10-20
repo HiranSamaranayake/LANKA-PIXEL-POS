@@ -1,235 +1,226 @@
 import React, { useState } from 'react';
-import {
-  Building2,
-  Shield,
-  Save,
-  CheckCircle2,
-} from 'lucide-react';
+import { Building2, Lock, Database, CheckCircle2, AlertCircle, Shield } from 'lucide-react';
 import type { UserRole } from '../../types';
-import { Badge } from '../common/Badge';
+import { useAuth } from '../../context/AuthContext';
+import { supabase, isSupabaseConfigured } from '../../lib/supabase';
 
 interface SettingsViewProps {
   currentRole: UserRole;
+  onOpenSetup: () => void;
 }
 
-export const SettingsView: React.FC<SettingsViewProps> = ({ currentRole }) => {
-  const [companyName, setCompanyName] = useState('LANKA PIXEL CREATIONS (PVT) LTD');
-  const [regNo, setRegNo] = useState('PV 00294812');
-  const [address, setAddress] = useState('Colombo 03, Western Province, Sri Lanka');
-  const [email, setEmail] = useState('contact@lankapixel.lk');
-  const [phone, setPhone] = useState('+94 11 234 5678');
-  const currency = 'LKR (Rs.)';
-  const [isSaved, setIsSaved] = useState(false);
+export const SettingsView: React.FC<SettingsViewProps> = ({ currentRole, onOpenSetup }) => {
+  const { profile, user } = useAuth();
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [passwordLoading, setPasswordLoading] = useState(false);
+  const [passwordMsg, setPasswordMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
-  const handleSave = (e: React.FormEvent) => {
+  const handlePasswordChange = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsSaved(true);
-    setTimeout(() => setIsSaved(false), 3000);
+    setPasswordMsg(null);
+
+    if (newPassword.length < 6) {
+      setPasswordMsg({ type: 'error', text: 'New password must be at least 6 characters long.' });
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      setPasswordMsg({ type: 'error', text: 'Passwords do not match.' });
+      return;
+    }
+
+    if (!supabase) {
+      setPasswordMsg({ type: 'error', text: 'Supabase is not configured yet.' });
+      return;
+    }
+
+    setPasswordLoading(true);
+    try {
+      const { error } = await supabase.auth.updateUser({ password: newPassword });
+      if (error) {
+        setPasswordMsg({ type: 'error', text: error.message });
+      } else {
+        setPasswordMsg({ type: 'success', text: 'Your account password has been updated successfully.' });
+        setNewPassword('');
+        setConfirmPassword('');
+      }
+    } catch (err: unknown) {
+      setPasswordMsg({ type: 'error', text: err instanceof Error ? err.message : 'Password update failed' });
+    } finally {
+      setPasswordLoading(false);
+    }
   };
 
   return (
     <div className="space-y-6">
-      {/* Top Banner */}
-      <div className="rounded-2xl border border-slate-800 bg-[#0c121e] p-6 shadow-xl flex items-center justify-between">
-        <div>
-          <div className="flex items-center gap-2 mb-1">
-            <Badge variant="blue">Enterprise Settings</Badge>
-            <span className="text-xs text-slate-400">
-              Active Role: <span className="text-white font-medium">{currentRole}</span> • Core Configuration
-            </span>
-          </div>
-          <h2 className="text-xl font-bold text-white tracking-tight">
-            Company Profile & Operational Preferences
-          </h2>
-          <p className="text-xs text-slate-300 mt-0.5">
-            Manage company registration credentials, default financial metrics, and operational modules
-          </p>
-        </div>
-
-        {isSaved && (
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-xs font-semibold animate-pulse">
-            <CheckCircle2 className="h-4 w-4" />
-            <span>Settings Saved Successfully</span>
-          </div>
-        )}
+      {/* Settings Header */}
+      <div className="bg-white p-5 rounded-xl border border-[#E5E7EB] shadow-2xs">
+        <h3 className="text-sm font-bold text-[#111827]">Company & Account Settings</h3>
+        <p className="text-xs text-gray-500 mt-0.5">
+          Corporate entity profile, security credentials, and system configuration
+        </p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Company Profile Form */}
-        <div className="lg:col-span-2 rounded-2xl border border-slate-800 bg-[#0c121e] p-6 shadow-xl">
-          <div className="flex items-center gap-2 mb-4">
-            <Building2 className="h-4 w-4 text-blue-400" />
-            <h3 className="text-sm font-bold text-white uppercase tracking-wider">
-              Registered Corporate Entity Details
-            </h3>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Company Profile (Read-only or Admin config) */}
+        <div className="bg-white p-6 rounded-xl border border-[#E5E7EB] shadow-2xs space-y-4">
+          <div className="flex items-center gap-2 pb-3 border-b border-[#E5E7EB]">
+            <Building2 className="h-4 w-4 text-[#2563EB]" />
+            <h4 className="text-xs font-bold text-[#111827] uppercase tracking-wider">
+              Company Legal Entity
+            </h4>
           </div>
 
-          <form onSubmit={handleSave} className="space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-xs font-semibold text-slate-300 uppercase mb-1">
-                  Company Legal Name
-                </label>
-                <input
-                  type="text"
-                  value={companyName}
-                  onChange={(e) => setCompanyName(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-700/80 text-white text-xs font-semibold focus:outline-none focus:border-blue-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-300 uppercase mb-1">
-                  Company Registration Number
-                </label>
-                <input
-                  type="text"
-                  value={regNo}
-                  onChange={(e) => setRegNo(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-700/80 text-white text-xs font-mono focus:outline-none focus:border-blue-500"
-                />
-              </div>
-            </div>
-
+          <div className="space-y-3 text-xs">
             <div>
-              <label className="block text-xs font-semibold text-slate-300 uppercase mb-1">
-                Registered Studio / Office Address
-              </label>
+              <label className="block text-gray-500 font-semibold mb-1">Company Legal Name</label>
               <input
                 type="text"
-                value={address}
-                onChange={(e) => setAddress(e.target.value)}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-700/80 text-white text-xs focus:outline-none focus:border-blue-500"
+                disabled
+                value="LANKA PIXEL CREATIONS (PVT) LTD"
+                className="w-full px-3 py-2 rounded-lg border border-[#E5E7EB] bg-gray-50 font-bold text-[#111827]"
               />
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-xs font-semibold text-slate-300 uppercase mb-1">
-                  Official Email
-                </label>
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-700/80 text-white text-xs focus:outline-none focus:border-blue-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-300 uppercase mb-1">
-                  Official Contact Phone
-                </label>
-                <input
-                  type="text"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-700/80 text-white text-xs focus:outline-none focus:border-blue-500"
-                />
-              </div>
+            <div>
+              <label className="block text-gray-500 font-semibold mb-1">Base Currency</label>
+              <input
+                type="text"
+                disabled
+                value="Sri Lankan Rupee (LKR - Rs.)"
+                className="w-full px-3 py-2 rounded-lg border border-[#E5E7EB] bg-gray-50 text-gray-700 font-medium"
+              />
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
-              <div>
-                <label className="block text-xs font-semibold text-slate-300 uppercase mb-1">
-                  Base Reporting Currency
-                </label>
-                <input
-                  type="text"
-                  disabled
-                  value={currency}
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900/60 border border-slate-800 text-blue-400 text-xs font-bold"
-                />
-                <span className="text-[10px] text-slate-500 mt-1 block">
-                  Fixed to Sri Lankan Rupee (LKR)
-                </span>
-              </div>
+            <div>
+              <label className="block text-gray-500 font-semibold mb-1">Operating Timezone</label>
+              <input
+                type="text"
+                disabled
+                value="Asia/Colombo (GMT+5:30)"
+                className="w-full px-3 py-2 rounded-lg border border-[#E5E7EB] bg-gray-50 text-gray-700 font-medium"
+              />
+            </div>
 
-              <div>
-                <label className="block text-xs font-semibold text-slate-300 uppercase mb-1">
-                  Financial Net Calculation Engine
-                </label>
-                <input
-                  type="text"
-                  disabled
-                  value="Operational Net = Income − Expenses"
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900/60 border border-slate-800 text-white text-xs font-mono"
-                />
-                <span className="text-[10px] text-slate-500 mt-1 block">
-                  Computed dynamically across daily, weekly, monthly ranges
+            <div className="pt-2 border-t border-[#E5E7EB]">
+              <div className="flex items-center justify-between text-xs text-gray-500">
+                <span>System Modules Status:</span>
+                <span className="font-semibold text-blue-700 bg-blue-50 px-2 py-0.5 rounded">
+                  Daily Advertising Budget Excluded
                 </span>
               </div>
             </div>
+          </div>
+        </div>
 
-            <div className="flex justify-end pt-3">
-              <button
-                type="submit"
-                className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold shadow-lg shadow-blue-600/30 transition-all active:scale-95"
-              >
-                <Save className="h-4 w-4" />
-                <span>Save Profile Changes</span>
-              </button>
+        {/* User Account & Password Reset */}
+        <div className="bg-white p-6 rounded-xl border border-[#E5E7EB] shadow-2xs space-y-4">
+          <div className="flex items-center gap-2 pb-3 border-b border-[#E5E7EB]">
+            <Lock className="h-4 w-4 text-[#2563EB]" />
+            <h4 className="text-xs font-bold text-[#111827] uppercase tracking-wider">
+              Your Staff Account & Security
+            </h4>
+          </div>
+
+          <div className="p-3 bg-gray-50 rounded-lg border border-[#E5E7EB] space-y-1.5 text-xs">
+            <div className="flex justify-between">
+              <span className="text-gray-500">Full Name:</span>
+              <span className="font-bold text-[#111827]">{profile?.full_name || 'Staff Member'}</span>
             </div>
+            <div className="flex justify-between">
+              <span className="text-gray-500">Email:</span>
+              <span className="font-mono text-gray-700">{profile?.email || user?.email || '—'}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-500">Assigned Role:</span>
+              <span className="font-semibold text-[#2563EB]">{currentRole}</span>
+            </div>
+          </div>
+
+          {passwordMsg && (
+            <div
+              className={`p-3 rounded-lg text-xs flex items-start gap-2 ${
+                passwordMsg.type === 'success'
+                  ? 'bg-blue-50 border border-blue-200 text-blue-800'
+                  : 'bg-red-50 border border-red-200 text-red-700'
+              }`}
+            >
+              {passwordMsg.type === 'success' ? (
+                <CheckCircle2 className="h-4 w-4 text-blue-600 shrink-0 mt-0.5" />
+              ) : (
+                <AlertCircle className="h-4 w-4 text-red-500 shrink-0 mt-0.5" />
+              )}
+              <span>{passwordMsg.text}</span>
+            </div>
+          )}
+
+          <form onSubmit={handlePasswordChange} className="space-y-3 text-xs pt-1">
+            <h5 className="font-semibold text-[#111827]">Change Your Password</h5>
+
+            <div>
+              <label className="block text-gray-500 mb-1">New Password</label>
+              <input
+                type="password"
+                required
+                minLength={6}
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                placeholder="At least 6 characters"
+                className="w-full px-3 py-2 rounded-lg border border-[#E5E7EB] text-[#111827] focus:outline-none focus:border-[#60A5FA]"
+              />
+            </div>
+
+            <div>
+              <label className="block text-gray-500 mb-1">Confirm New Password</label>
+              <input
+                type="password"
+                required
+                minLength={6}
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder="Re-enter new password"
+                className="w-full px-3 py-2 rounded-lg border border-[#E5E7EB] text-[#111827] focus:outline-none focus:border-[#60A5FA]"
+              />
+            </div>
+
+            <button
+              type="submit"
+              disabled={passwordLoading}
+              className="px-4 py-2 rounded-lg bg-[#60A5FA] hover:bg-blue-500 text-white font-bold transition-colors shadow-2xs disabled:opacity-50"
+            >
+              {passwordLoading ? 'Updating Password...' : 'Update Password'}
+            </button>
           </form>
         </div>
+      </div>
 
-        {/* System Policies & Module Integrity */}
-        <div className="space-y-4">
-          <div className="rounded-2xl border border-slate-800 bg-[#0c121e] p-6 shadow-xl">
-            <div className="flex items-center gap-2 mb-3">
-              <Shield className="h-4 w-4 text-emerald-400" />
-              <h3 className="text-xs font-bold text-white uppercase tracking-wider">
-                System Scope & Requirements
-              </h3>
-            </div>
-
-            <div className="space-y-3 text-xs">
-              <div className="p-3 rounded-xl bg-slate-900/60 border border-slate-800">
-                <span className="font-semibold text-white block mb-0.5">
-                  Core Calculation Modules
-                </span>
-                <p className="text-slate-400 text-[11px]">
-                  Daily, weekly, and monthly calculations for Income, Expenses, and Operational Net
-                  are active.
-                </p>
-              </div>
-
-              <div className="p-3 rounded-xl bg-slate-900/60 border border-slate-800">
-                <span className="font-semibold text-white block mb-0.5">
-                  Designer Output Tracking
-                </span>
-                <p className="text-slate-400 text-[11px]">
-                  Individual daily tracking for completed graphic posts and video productions per
-                  designer is enforced.
-                </p>
-              </div>
-
-              <div className="p-3 rounded-xl bg-blue-500/10 border border-blue-500/20">
-                <span className="font-semibold text-blue-300 block mb-0.5">
-                  Role Preparation
-                </span>
-                <p className="text-slate-300 text-[11px]">
-                  Ready for Admin, Call Center Operator, and Designer roles.
-                </p>
-              </div>
-
-              <div className="p-3 rounded-xl bg-slate-900/80 border border-slate-800">
-                <span className="font-semibold text-slate-300 block mb-0.5">
-                  Excluded Module Notice
-                </span>
-                <p className="text-slate-500 text-[11px]">
-                  Daily Advertising Budget module is strictly excluded per project specifications.
-                </p>
-              </div>
-            </div>
+      {/* Database Connection Card */}
+      <div className="bg-white p-6 rounded-xl border border-[#E5E7EB] shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <div className="p-3 rounded-lg bg-[#EFF6FF] text-[#2563EB]">
+            <Database className="h-5 w-5" />
           </div>
-
-          <div className="rounded-2xl border border-slate-800 bg-[#0c121e] p-5 shadow-xl text-xs text-slate-400">
-            <div className="font-bold text-white mb-1">Lanka Pixel Management Platform</div>
-            <div>React 19 • Vite • TypeScript • Tailwind CSS</div>
-            <div className="text-[11px] text-blue-400 mt-1">Application Shell Active (Phase 1)</div>
+          <div>
+            <h4 className="text-xs font-bold text-[#111827] uppercase tracking-wider">
+              Supabase Database & Authentication
+            </h4>
+            <p className="text-xs text-gray-500 mt-0.5">
+              Status:{' '}
+              <span className="font-semibold text-[#111827]">
+                {isSupabaseConfigured ? 'Connected to Supabase PostgreSQL' : 'Not Connected'}
+              </span>
+            </p>
           </div>
         </div>
+
+        <button
+          onClick={onOpenSetup}
+          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg border border-[#E5E7EB] bg-white hover:bg-gray-50 text-gray-700 text-xs font-semibold transition-colors shadow-2xs"
+        >
+          <Shield className="h-3.5 w-3.5 text-gray-400" />
+          <span>View Connection & SQL Schema</span>
+        </button>
       </div>
     </div>
   );

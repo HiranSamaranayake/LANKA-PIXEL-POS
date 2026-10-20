@@ -1,333 +1,233 @@
 import React, { useState } from 'react';
-import {
-  Download,
-  PieChart,
-  Palette,
-  Video,
-} from 'lucide-react';
-import type {
-  OverallCalculations,
-  IncomeTransaction,
-  ExpenseTransaction,
-  DesignerDailyOutput,
-} from '../../types';
-import { formatLKR, formatDate } from '../../utils/formatters';
-import { Badge } from '../common/Badge';
+import { Download, Calendar, TrendingUp, TrendingDown, Scale, FileText, AlertTriangle } from 'lucide-react';
+import type { IncomeRecord, ExpenseRecord, DailyPostCount } from '../../types';
+import { formatLKR, formatDate, formatMonth, getCurrentMonthString } from '../../utils/formatters';
 
 interface ReportsViewProps {
-  calculations: OverallCalculations;
-  incomes: IncomeTransaction[];
-  expenses: ExpenseTransaction[];
-  designerOutputs: DesignerDailyOutput[];
-  referenceDate: string;
+  incomes: IncomeRecord[];
+  expenses: ExpenseRecord[];
+  postCounts: DailyPostCount[];
 }
 
 export const ReportsView: React.FC<ReportsViewProps> = ({
-  calculations,
   incomes,
   expenses,
-  designerOutputs,
-  referenceDate,
+  postCounts,
 }) => {
-  const [reportWindow, setReportWindow] = useState<'daily' | 'weekly' | 'monthly'>('monthly');
+  const [selectedMonth, setSelectedMonth] = useState<string>(getCurrentMonthString());
 
-  const selectedMetrics = calculations[reportWindow];
-  const marginPercent =
-    selectedMetrics.income > 0
-      ? Math.round((selectedMetrics.net / selectedMetrics.income) * 100)
-      : 0;
+  // Filter records by selectedMonth (YYYY-MM)
+  const monthIncomes = incomes.filter((i) => i.date.startsWith(selectedMonth));
+  const monthExpenses = expenses.filter((e) => e.date.startsWith(selectedMonth));
+  const monthPosts = postCounts.filter((p) => p.date.startsWith(selectedMonth));
 
-  // Total graphics and videos across all time
-  const totalGraphicsEver = designerOutputs.reduce((acc, curr) => acc + curr.graphicPosts, 0);
-  const totalVideosEver = designerOutputs.reduce((acc, curr) => acc + curr.videos, 0);
+  // Monthly Calculations
+  const totalIncome = monthIncomes.reduce((acc, curr) => acc + curr.amount, 0);
+  const totalExpenses = monthExpenses.reduce((acc, curr) => acc + curr.amount, 0);
+  const operationalNet = totalIncome - totalExpenses; // Formula: Total Income - Total Expenses
+  const totalCompletedPosts = monthPosts.reduce((acc, curr) => acc + curr.completed_posts, 0);
 
-  // Category breakdown for income
-  const categoryTotals: Record<string, number> = {};
-  incomes.forEach((i) => {
-    categoryTotals[i.category] = (categoryTotals[i.category] || 0) + i.amount;
-  });
+  // Collect all unique dates in this month from income, expense, and post records
+  const allDatesSet = new Set<string>();
+  monthIncomes.forEach((i) => allDatesSet.add(i.date));
+  monthExpenses.forEach((e) => allDatesSet.add(e.date));
+  monthPosts.forEach((p) => allDatesSet.add(p.date));
 
-  // Category breakdown for expenses
-  const expenseCategoryTotals: Record<string, number> = {};
-  expenses.forEach((e) => {
-    expenseCategoryTotals[e.category] = (expenseCategoryTotals[e.category] || 0) + e.amount;
-  });
+  const sortedDates = Array.from(allDatesSet).sort((a, b) => b.localeCompare(a));
 
   return (
     <div className="space-y-6">
-      {/* Report Header */}
-      <div className="rounded-2xl border border-slate-800 bg-[#0c121e] p-6 shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-4">
+      {/* Month Selector & Print Header */}
+      <div className="bg-white p-5 rounded-xl border border-[#E5E7EB] shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2 mb-1">
-            <Badge variant="blue" dot>
-              Financial Intelligence
-            </Badge>
-            <span className="text-xs text-slate-400">Lanka Pixel Creations (Pvt) Ltd</span>
-          </div>
-          <h2 className="text-xl font-bold text-white tracking-tight">
-            Financial & Studio Performance Statement
+          <span className="text-[10px] font-bold text-[#2563EB] uppercase tracking-wider bg-[#EFF6FF] px-2.5 py-0.5 rounded-full mb-1 inline-block">
+            Financial & Operational Intelligence
+          </span>
+          <h2 className="text-lg font-bold text-[#111827]">
+            Monthly Financial Performance Statement
           </h2>
-          <p className="text-xs text-slate-300 mt-0.5">
-            Real-time automated reconciliation of daily, weekly, and monthly operational net
+          <p className="text-xs text-gray-500 mt-0.5">
+            LANKA PIXEL CREATIONS (PVT) LTD • Period: {formatMonth(selectedMonth)}
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
-          <div className="flex items-center p-1 rounded-xl bg-slate-900 border border-slate-800 text-xs">
-            <button
-              onClick={() => setReportWindow('daily')}
-              className={`px-3 py-1.5 rounded-lg capitalize font-semibold transition-all ${
-                reportWindow === 'daily'
-                  ? 'bg-blue-600 text-white shadow-md'
-                  : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              Daily
-            </button>
-            <button
-              onClick={() => setReportWindow('weekly')}
-              className={`px-3 py-1.5 rounded-lg capitalize font-semibold transition-all ${
-                reportWindow === 'weekly'
-                  ? 'bg-blue-600 text-white shadow-md'
-                  : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              Weekly
-            </button>
-            <button
-              onClick={() => setReportWindow('monthly')}
-              className={`px-3 py-1.5 rounded-lg capitalize font-semibold transition-all ${
-                reportWindow === 'monthly'
-                  ? 'bg-blue-600 text-white shadow-md'
-                  : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              Monthly
-            </button>
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 text-xs text-gray-700 font-medium">
+            <Calendar className="h-4 w-4 text-gray-400" />
+            <span>Select Month:</span>
+            <input
+              type="month"
+              value={selectedMonth}
+              onChange={(e) => setSelectedMonth(e.target.value)}
+              className="px-2.5 py-1.5 rounded-lg border border-[#E5E7EB] text-xs font-bold text-[#111827] focus:outline-none focus:border-[#60A5FA]"
+            />
           </div>
 
           <button
             onClick={() => window.print()}
-            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white border border-slate-700 text-xs font-semibold transition-all"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#E5E7EB] bg-white hover:bg-gray-50 text-gray-700 text-xs font-semibold transition-colors shadow-2xs"
           >
-            <Download className="h-3.5 w-3.5 text-blue-400" />
-            <span>Print / Export</span>
+            <Download className="h-3.5 w-3.5 text-gray-500" />
+            <span>Print Report</span>
           </button>
         </div>
       </div>
 
-      {/* Primary Statement Metrics */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        {/* Income */}
-        <div className="rounded-2xl border border-slate-800 bg-[#0c121e] p-5">
-          <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-1">
-            {reportWindow} Gross Inflow
-          </span>
-          <div className="text-2xl font-black text-white">
-            {formatLKR(selectedMetrics.income)}
+      {/* 4 Required Monthly Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Month Total Income */}
+        <div className="bg-white p-5 rounded-xl border border-[#E5E7EB] shadow-2xs">
+          <div className="flex items-center justify-between text-xs text-gray-500 mb-1">
+            <span className="font-semibold">Total Income</span>
+            <div className="p-1 rounded-md bg-[#EFF6FF] text-[#2563EB]">
+              <TrendingUp className="h-4 w-4" />
+            </div>
           </div>
-          <span className="text-[11px] text-blue-400 mt-2 block">
-            Client package & invoice settlements
-          </span>
-        </div>
-
-        {/* Expenses */}
-        <div className="rounded-2xl border border-slate-800 bg-[#0c121e] p-5">
-          <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-1">
-            {reportWindow} Operational Cost
-          </span>
-          <div className="text-2xl font-black text-slate-200">
-            {formatLKR(selectedMetrics.expenses)}
+          <div className="text-2xl font-bold text-[#111827] mt-1">
+            {formatLKR(totalIncome)}
           </div>
-          <span className="text-[11px] text-rose-400 mt-2 block">
-            Studio overhead & contractor costs
-          </span>
-        </div>
-
-        {/* Operational Net */}
-        <div className="rounded-2xl border border-blue-900/40 bg-blue-950/20 p-5">
-          <span className="text-xs font-bold text-blue-300 uppercase tracking-wider block mb-1">
-            {reportWindow} Operational Net
-          </span>
-          <div
-            className={`text-2xl font-black ${
-              selectedMetrics.net >= 0 ? 'text-blue-400' : 'text-rose-400'
-            }`}
-          >
-            {formatLKR(selectedMetrics.net)}
-          </div>
-          <span className="text-[11px] text-slate-400 mt-2 block">
-            Net Surplus (Income − Expenses)
-          </span>
-        </div>
-
-        {/* Operating Margin */}
-        <div className="rounded-2xl border border-slate-800 bg-[#0c121e] p-5">
-          <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-1">
-            Operating Net Margin
-          </span>
-          <div className="text-2xl font-black text-emerald-400">{marginPercent}%</div>
-          <span className="text-[11px] text-slate-400 mt-2 block">Efficiency & profitability ratio</span>
-        </div>
-      </div>
-
-      {/* Comparative Summary Table of All 3 Windows */}
-      <div className="rounded-2xl border border-slate-800 bg-[#0c121e] overflow-hidden shadow-xl">
-        <div className="p-4 border-b border-slate-800/80 bg-slate-900/40">
-          <h3 className="text-xs font-bold text-white uppercase tracking-wider">
-            Consolidated Ledger Comparison Table
-          </h3>
-          <p className="text-[11px] text-slate-400">
-            Calculated figures for Daily (Today), Weekly (7 Days), and Monthly (Current Month)
+          <p className="text-[11px] text-gray-400 mt-1">
+            {monthIncomes.length} incoming settlements
           </p>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
-            <thead className="bg-slate-900/60 text-slate-400 uppercase font-semibold border-b border-slate-800">
-              <tr>
-                <th className="px-6 py-3">Timeframe Window</th>
-                <th className="px-6 py-3 text-right">Total Income (LKR)</th>
-                <th className="px-6 py-3 text-right">Total Expenses (LKR)</th>
-                <th className="px-6 py-3 text-right">Operational Net (LKR)</th>
-                <th className="px-6 py-3 text-right">Profit Margin</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-800/60 text-slate-300 font-medium">
-              <tr className="hover:bg-slate-900/50">
-                <td className="px-6 py-4 font-bold text-white">Daily (Today - {formatDate(referenceDate)})</td>
-                <td className="px-6 py-4 text-right text-blue-400 font-bold">
-                  {formatLKR(calculations.daily.income)}
-                </td>
-                <td className="px-6 py-4 text-right text-slate-300">
-                  {formatLKR(calculations.daily.expenses)}
-                </td>
-                <td className="px-6 py-4 text-right font-extrabold text-blue-400">
-                  {formatLKR(calculations.daily.net)}
-                </td>
-                <td className="px-6 py-4 text-right text-emerald-400 font-bold">
-                  {calculations.daily.income > 0
-                    ? Math.round((calculations.daily.net / calculations.daily.income) * 100)
-                    : 0}
-                  %
-                </td>
-              </tr>
+        {/* Month Total Expenses */}
+        <div className="bg-white p-5 rounded-xl border border-[#E5E7EB] shadow-2xs">
+          <div className="flex items-center justify-between text-xs text-gray-500 mb-1">
+            <span className="font-semibold">Total Expenses</span>
+            <div className="p-1 rounded-md bg-gray-100 text-gray-600">
+              <TrendingDown className="h-4 w-4" />
+            </div>
+          </div>
+          <div className="text-2xl font-bold text-[#111827] mt-1">
+            {formatLKR(totalExpenses)}
+          </div>
+          <p className="text-[11px] text-gray-400 mt-1">
+            {monthExpenses.length} operational disbursements
+          </p>
+        </div>
 
-              <tr className="hover:bg-slate-900/50">
-                <td className="px-6 py-4 font-bold text-white">Weekly (Rolling 7-Day Window)</td>
-                <td className="px-6 py-4 text-right text-blue-400 font-bold">
-                  {formatLKR(calculations.weekly.income)}
-                </td>
-                <td className="px-6 py-4 text-right text-slate-300">
-                  {formatLKR(calculations.weekly.expenses)}
-                </td>
-                <td className="px-6 py-4 text-right font-extrabold text-blue-400">
-                  {formatLKR(calculations.weekly.net)}
-                </td>
-                <td className="px-6 py-4 text-right text-emerald-400 font-bold">
-                  {calculations.weekly.income > 0
-                    ? Math.round((calculations.weekly.net / calculations.weekly.income) * 100)
-                    : 0}
-                  %
-                </td>
-              </tr>
+        {/* Month Operational Net (Income - Expenses) */}
+        <div className="bg-white p-5 rounded-xl border border-[#E5E7EB] shadow-2xs">
+          <div className="flex items-center justify-between text-xs text-gray-500 mb-1">
+            <span className="font-semibold">Operational Net</span>
+            <div className="p-1 rounded-md bg-[#EFF6FF] text-[#2563EB]">
+              <Scale className="h-4 w-4" />
+            </div>
+          </div>
+          <div className="text-2xl font-bold text-[#111827] mt-1">
+            {formatLKR(operationalNet)}
+          </div>
+          <p className="text-[11px] text-gray-400 mt-1">Total Income − Total Expenses</p>
+        </div>
 
-              <tr className="hover:bg-slate-900/50 bg-blue-950/10">
-                <td className="px-6 py-4 font-bold text-blue-300">Monthly (October 2026 MTD)</td>
-                <td className="px-6 py-4 text-right text-blue-400 font-bold">
-                  {formatLKR(calculations.monthly.income)}
-                </td>
-                <td className="px-6 py-4 text-right text-slate-300">
-                  {formatLKR(calculations.monthly.expenses)}
-                </td>
-                <td className="px-6 py-4 text-right font-extrabold text-blue-400">
-                  {formatLKR(calculations.monthly.net)}
-                </td>
-                <td className="px-6 py-4 text-right text-emerald-400 font-bold">
-                  {calculations.monthly.income > 0
-                    ? Math.round((calculations.monthly.net / calculations.monthly.income) * 100)
-                    : 0}
-                  %
-                </td>
-              </tr>
-            </tbody>
-          </table>
+        {/* Total Completed Posts */}
+        <div className="bg-white p-5 rounded-xl border border-[#E5E7EB] shadow-2xs">
+          <div className="flex items-center justify-between text-xs text-gray-500 mb-1">
+            <span className="font-semibold">Completed Posts</span>
+            <div className="p-1 rounded-md bg-[#EFF6FF] text-[#2563EB]">
+              <FileText className="h-4 w-4" />
+            </div>
+          </div>
+          <div className="text-2xl font-bold text-[#111827] mt-1">
+            {totalCompletedPosts} <span className="text-xs font-normal text-gray-400">posts</span>
+          </div>
+          <p className="text-[11px] text-gray-400 mt-1">Creative studio deliverables</p>
         </div>
       </div>
 
-      {/* Revenue by Stream & Studio Volume Breakdown */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Income Revenue Distribution */}
-        <div className="rounded-2xl border border-slate-800 bg-[#0c121e] p-5 shadow-lg">
-          <div className="flex items-center gap-2 mb-4">
-            <PieChart className="h-4 w-4 text-blue-400" />
-            <h3 className="text-xs font-bold text-white uppercase tracking-wider">
-              Revenue Stream Breakdown
-            </h3>
-          </div>
+      {/* Explicit Accounting Notice */}
+      <div className="p-3.5 rounded-xl bg-gray-50 border border-[#E5E7EB] flex items-start gap-2.5 text-xs text-gray-600">
+        <AlertTriangle className="h-4 w-4 text-gray-500 shrink-0 mt-0.5" />
+        <p className="leading-relaxed">
+          <strong className="text-[#111827]">Financial Accounting Notice:</strong> Operational Net is computed strictly as <span className="font-mono font-semibold">Total Income − Total Expenses</span> based on entries recorded in the system. Do not call this figure final accounting profit because not all possible business costs, taxes, or depreciation may be recorded.
+        </p>
+      </div>
 
-          <div className="space-y-3">
-            {Object.entries(categoryTotals).map(([cat, amt]) => {
-              const pct = Math.round((amt / calculations.totalIncome) * 100);
-              return (
-                <div key={cat} className="space-y-1">
-                  <div className="flex justify-between text-xs">
-                    <span className="text-slate-300 font-medium">{cat}</span>
-                    <span className="text-blue-400 font-bold">
-                      {formatLKR(amt)} ({pct}%)
-                    </span>
-                  </div>
-                  <div className="h-2 w-full rounded-full bg-slate-900 overflow-hidden border border-slate-800">
-                    <div
-                      className="h-full bg-gradient-to-r from-blue-600 to-sky-400 rounded-full"
-                      style={{ width: `${pct}%` }}
-                    />
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Studio Production Totals */}
-        <div className="rounded-2xl border border-slate-800 bg-[#0c121e] p-5 shadow-lg flex flex-col justify-between">
+      {/* Daily Breakdown Comparison Table */}
+      <div className="bg-white rounded-xl border border-[#E5E7EB] shadow-2xs overflow-hidden">
+        <div className="px-5 py-4 border-b border-[#E5E7EB] flex items-center justify-between">
           <div>
-            <div className="flex items-center gap-2 mb-4">
-              <Palette className="h-4 w-4 text-indigo-400" />
-              <h3 className="text-xs font-bold text-white uppercase tracking-wider">
-                Creative Studio Cumulative Volume
-              </h3>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="p-4 rounded-xl bg-slate-900/60 border border-slate-800 text-center">
-                <Palette className="h-6 w-6 text-sky-400 mx-auto mb-2" />
-                <div className="text-3xl font-black text-white">{totalGraphicsEver}</div>
-                <span className="text-xs text-slate-400 uppercase font-semibold">
-                  Graphic Posts Delivered
-                </span>
-              </div>
-
-              <div className="p-4 rounded-xl bg-slate-900/60 border border-slate-800 text-center">
-                <Video className="h-6 w-6 text-blue-400 mx-auto mb-2" />
-                <div className="text-3xl font-black text-white">{totalVideosEver}</div>
-                <span className="text-xs text-slate-400 uppercase font-semibold">
-                  Videos & Reels Delivered
-                </span>
-              </div>
-            </div>
-
-            <p className="text-xs text-slate-400 mt-4 leading-relaxed">
-              Every graphic post and video reel is tracked against daily quota specifications,
-              enabling Lanka Pixel Creations to ensure top-tier deliverable velocity.
+            <h4 className="text-xs font-bold text-[#111827] uppercase tracking-wider">
+              Daily Breakdown for {formatMonth(selectedMonth)}
+            </h4>
+            <p className="text-[11px] text-gray-400">
+              Daily income, expenses, operational net, and completed posts
             </p>
           </div>
-
-          <div className="mt-4 pt-3 border-t border-slate-800 flex items-center justify-between text-xs text-slate-500">
-            <span>Verified System Audit</span>
-            <span className="text-blue-400 font-medium">Lanka Pixel OS Core</span>
+          <div className="text-xs text-gray-500 font-semibold">
+            {sortedDates.length} Active Days
           </div>
         </div>
+
+        {sortedDates.length === 0 ? (
+          <div className="text-center py-12 text-xs text-gray-400">
+            No financial or post records found for {formatMonth(selectedMonth)}.
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs">
+              <thead className="bg-gray-50 text-gray-500 uppercase text-[11px] font-semibold border-b border-[#E5E7EB]">
+                <tr>
+                  <th className="px-5 py-3">Date</th>
+                  <th className="px-5 py-3 text-right">Daily Income</th>
+                  <th className="px-5 py-3 text-right">Daily Expenses</th>
+                  <th className="px-5 py-3 text-right">Daily Operational Net</th>
+                  <th className="px-5 py-3 text-center">Completed Posts</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[#E5E7EB] text-gray-700">
+                {sortedDates.map((dateStr) => {
+                  const dayInc = monthIncomes
+                    .filter((i) => i.date === dateStr)
+                    .reduce((acc, curr) => acc + curr.amount, 0);
+                  const dayExp = monthExpenses
+                    .filter((e) => e.date === dateStr)
+                    .reduce((acc, curr) => acc + curr.amount, 0);
+                  const dayNet = dayInc - dayExp;
+                  const dayPosts = monthPosts
+                    .filter((p) => p.date === dateStr)
+                    .reduce((acc, curr) => acc + curr.completed_posts, 0);
+
+                  return (
+                    <tr key={dateStr} className="hover:bg-gray-50/80 transition-colors">
+                      <td className="px-5 py-3 font-medium text-gray-900 whitespace-nowrap">
+                        {formatDate(dateStr)}
+                      </td>
+                      <td className="px-5 py-3 text-right font-semibold text-[#111827] whitespace-nowrap">
+                        {dayInc > 0 ? formatLKR(dayInc) : <span className="text-gray-300">Rs. 0</span>}
+                      </td>
+                      <td className="px-5 py-3 text-right font-medium text-gray-600 whitespace-nowrap">
+                        {dayExp > 0 ? formatLKR(dayExp) : <span className="text-gray-300">Rs. 0</span>}
+                      </td>
+                      <td className="px-5 py-3 text-right font-bold text-[#111827] whitespace-nowrap">
+                        {formatLKR(dayNet)}
+                      </td>
+                      <td className="px-5 py-3 text-center whitespace-nowrap">
+                        {dayPosts > 0 ? (
+                          <span className="px-2 py-0.5 rounded-full bg-[#EFF6FF] text-[#2563EB] font-bold text-[11px]">
+                            {dayPosts} posts
+                          </span>
+                        ) : (
+                          <span className="text-gray-300">—</span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+              <tfoot className="bg-gray-50/70 border-t border-[#E5E7EB] font-bold text-xs text-[#111827]">
+                <tr>
+                  <td className="px-5 py-3 uppercase">Total ({formatMonth(selectedMonth)})</td>
+                  <td className="px-5 py-3 text-right">{formatLKR(totalIncome)}</td>
+                  <td className="px-5 py-3 text-right">{formatLKR(totalExpenses)}</td>
+                  <td className="px-5 py-3 text-right">{formatLKR(operationalNet)}</td>
+                  <td className="px-5 py-3 text-center">{totalCompletedPosts} posts</td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -1,100 +1,73 @@
 export type UserRole = 'Admin' | 'Call Center Operator' | 'Designer';
 
-export type NavigationModule = 
-  | 'dashboard'
-  | 'income'
-  | 'expenses'
-  | 'staff'
-  | 'designer-performance'
-  | 'reports'
-  | 'settings';
+export type UserStatus = 'Active' | 'Deactivated';
 
-export type IncomeCategory = 
-  | 'Branding & Identity'
-  | 'Social Media Marketing'
-  | 'Video Production'
-  | 'Motion Graphics'
-  | 'UI/UX Design'
-  | 'Print Media'
-  | 'Package Retainer';
-
-export type ExpenseCategory = 
-  | 'Software & Subscriptions'
-  | 'Office & Utilities'
-  | 'Hardware & Equipment'
-  | 'Freelance Contractors'
-  | 'Internet & Communication'
-  | 'Office Welfare & Refreshments'
-  | 'Logistics & Courier'
-  | 'Legal & Compliance';
-
-export interface IncomeTransaction {
+export interface UserProfile {
   id: string;
-  date: string; // YYYY-MM-DD
-  clientName: string;
-  projectName: string;
-  amount: number;
-  category: IncomeCategory;
-  paymentMethod: 'Bank Transfer' | 'Cash' | 'Online Gateway' | 'Cheque';
-  invoiceNumber: string;
-  status: 'Paid' | 'Pending';
-  recordedBy: string;
-  notes?: string;
+  email: string;
+  full_name: string;
+  role: UserRole;
+  status: UserStatus;
+  created_at?: string;
+  updated_at?: string;
 }
 
-export interface ExpenseTransaction {
+export interface IncomeRecord {
   id: string;
   date: string; // YYYY-MM-DD
-  vendor: string;
+  source: string; // Service or income source
+  client_project?: string;
+  amount: number;
+  description?: string;
+  recorded_by: string;
+  user_id?: string;
+  created_at?: string;
+}
+
+export type ExpenseCategory =
+  | 'Facebook Boosting'
+  | 'Advertising'
+  | 'Salaries'
+  | 'Software'
+  | 'Internet'
+  | 'Electricity'
+  | 'Equipment'
+  | 'Transport'
+  | 'Office Expenses'
+  | 'Other';
+
+export interface ExpenseRecord {
+  id: string;
+  date: string; // YYYY-MM-DD
+  category: ExpenseCategory;
   description: string;
   amount: number;
-  category: ExpenseCategory;
-  paymentMethod: 'Corporate Card' | 'Bank Transfer' | 'Petty Cash';
-  receiptRef: string;
-  approvedBy: string;
-  notes?: string;
+  recorded_by: string;
+  user_id?: string;
+  created_at?: string;
 }
 
-export interface StaffMember {
+export interface DailyPostCount {
   id: string;
-  name: string;
-  role: UserRole;
-  designation: string;
-  department: 'Administration' | 'Customer Care & Sales' | 'Creative Studio';
-  email: string;
-  phone: string;
-  status: 'Active' | 'On Leave' | 'Remote';
-  joinDate: string;
-  activeProjectsCount: number;
-  avatarColor: string;
-}
-
-export interface DesignerDailyOutput {
-  id: string;
-  designerId: string;
-  designerName: string;
   date: string; // YYYY-MM-DD
-  graphicPosts: number;
-  videos: number;
-  targetGraphicPosts: number;
-  targetVideos: number;
-  clientProjects: string[];
+  designer_id: string;
+  designer_name: string;
+  completed_posts: number;
   notes?: string;
+  created_at?: string;
 }
 
-export interface TimeframeSummary {
+export interface FinancialTotals {
   income: number;
   expenses: number;
-  net: number; // income - expenses
+  net: number; // Income - Expenses
 }
 
-export interface OverallCalculations {
-  daily: TimeframeSummary;
-  weekly: TimeframeSummary;
-  monthly: TimeframeSummary;
-  totalIncome: number;
-  totalExpenses: number;
-  totalOperationalNet: number;
-  dailyDesignerGraphics: number;
-  dailyDesignerVideos: number;
-}
+export type NavigationModule =
+  | 'dashboard'
+  | 'income'
+  | 'posts'
+  | 'expenses'
+  | 'reports'
+  | 'staff'
+  | 'settings';

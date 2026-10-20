@@ -1,265 +1,498 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import type {
   NavigationModule,
   UserRole,
-  IncomeTransaction,
-  ExpenseTransaction,
-  StaffMember,
-  DesignerDailyOutput,
+  IncomeRecord,
+  ExpenseRecord,
+  DailyPostCount,
+  UserProfile,
 } from './types';
-import {
-  INITIAL_INCOMES,
-  INITIAL_EXPENSES,
-  INITIAL_STAFF,
-  INITIAL_DESIGNER_OUTPUTS,
-  CURRENT_DATE,
-} from './data/mockData';
-import { calculateMetrics } from './utils/calculations';
+import { getColomboToday, getCurrentMonthString } from './utils/formatters';
+import { supabase, isSupabaseConfigured } from './lib/supabase';
+import { AuthProvider, useAuth } from './context/AuthContext';
 
 // Layout
 import { Sidebar } from './components/layout/Sidebar';
 import { Header } from './components/layout/Header';
 
 // Views
+import { LoginView } from './components/auth/LoginView';
 import { DashboardView } from './components/dashboard/DashboardView';
 import { IncomeView } from './components/income/IncomeView';
+import { DailyPostCountView } from './components/posts/DailyPostCountView';
 import { ExpensesView } from './components/expenses/ExpensesView';
-import { StaffView } from './components/staff/StaffView';
-import { DesignerPerformanceView } from './components/designer/DesignerPerformanceView';
 import { ReportsView } from './components/reports/ReportsView';
+import { StaffManagementView } from './components/staff/StaffManagementView';
 import { SettingsView } from './components/settings/SettingsView';
 
 // Modals
 import { AddIncomeModal } from './components/income/AddIncomeModal';
 import { AddExpenseModal } from './components/expenses/AddExpenseModal';
-import { LogOutputModal } from './components/designer/LogOutputModal';
+import { LogPostModal } from './components/posts/LogPostModal';
 import { AddStaffModal } from './components/staff/AddStaffModal';
+import { SupabaseSetupModal } from './components/common/SupabaseSetupModal';
 
-export const App: React.FC = () => {
-  // Navigation & Role State
+const MainApp: React.FC = () => {
+  const { user, profile, loading: authLoading } = useAuth();
+
+  const currentRole: UserRole = profile?.role || 'Admin';
+  const todayStr = getColomboToday();
+  const currentMonthStr = getCurrentMonthString();
+
+  // Navigation
   const [currentModule, setCurrentModule] = useState<NavigationModule>('dashboard');
-  const [currentRole, setCurrentRole] = useState<UserRole>('Admin');
-  const [referenceDate] = useState<string>(CURRENT_DATE);
 
-  // Core Data State
-  const [incomes, setIncomes] = useState<IncomeTransaction[]>(INITIAL_INCOMES);
-  const [expenses, setExpenses] = useState<ExpenseTransaction[]>(INITIAL_EXPENSES);
-  const [staffList, setStaffList] = useState<StaffMember[]>(INITIAL_STAFF);
-  const [designerOutputs, setDesignerOutputs] = useState<DesignerDailyOutput[]>(INITIAL_DESIGNER_OUTPUTS);
+  // Supabase Data State
+  const [incomes, setIncomes] = useState<IncomeRecord[]>([]);
+  const [expenses, setExpenses] = useState<ExpenseRecord[]>([]);
+  const [postCounts, setPostCounts] = useState<DailyPostCount[]>([]);
+  const [staffList, setStaffList] = useState<UserProfile[]>([]);
 
   // Modals Visibility
   const [isAddIncomeOpen, setIsAddIncomeOpen] = useState(false);
+  const [editingIncome, setEditingIncome] = useState<IncomeRecord | null>(null);
+
   const [isAddExpenseOpen, setIsAddExpenseOpen] = useState(false);
-  const [isLogOutputOpen, setIsLogOutputOpen] = useState(false);
+  const [editingExpense, setEditingExpense] = useState<ExpenseRecord | null>(null);
+
+  const [isLogPostOpen, setIsLogPostOpen] = useState(false);
+  const [editingPost, setEditingPost] = useState<DailyPostCount | null>(null);
+
   const [isAddStaffOpen, setIsAddStaffOpen] = useState(false);
+  const [isSetupOpen, setIsSetupOpen] = useState(false);
 
-  // Active designers list (creative studio members)
-  const designers = useMemo(
-    () => staffList.filter((s) => s.role === 'Designer'),
-    [staffList]
-  );
+  // Fetch all database records from Supabase
+  const fetchData = useCallback(async () => {
+    if (!supabase || !user) return;
 
-  // Pure Calculation Engine: Daily, Weekly, Monthly totals for Income, Expenses, Operational Net
-  const calculations = useMemo(
-    () => calculateMetrics(incomes, expenses, designerOutputs, referenceDate),
-    [incomes, expenses, designerOutputs, referenceDate]
-  );
-
-  // Pending income count for badge
-  const pendingIncomeCount = useMemo(
-    () => incomes.filter((i) => i.status === 'Pending').length,
-    [incomes]
-  );
-
-  // Handlers for Incomes
-  const handleAddIncome = (newIncome: IncomeTransaction) => {
-    setIncomes((prev) => [newIncome, ...prev]);
-  };
-
-  const handleToggleIncomeStatus = (id: string) => {
-    setIncomes((prev) =>
-      prev.map((item) =>
-        item.id === id
-          ? { ...item, status: item.status === 'Paid' ? 'Pending' : 'Paid' }
-          : item
-      )
-    );
-  };
-
-  const handleDeleteIncome = (id: string) => {
-    setIncomes((prev) => prev.filter((item) => item.id !== id));
-  };
-
-  // Handlers for Expenses
-  const handleAddExpense = (newExpense: ExpenseTransaction) => {
-    setExpenses((prev) => [newExpense, ...prev]);
-  };
-
-  const handleDeleteExpense = (id: string) => {
-    setExpenses((prev) => prev.filter((item) => item.id !== id));
-  };
-
-  // Handlers for Designer Output
-  const handleLogOutput = (newOutput: DesignerDailyOutput) => {
-    // If output exists for this designer and date, update it, else add new
-    setDesignerOutputs((prev) => {
-      const existingIndex = prev.findIndex(
-        (o) => o.designerId === newOutput.designerId && o.date === newOutput.date
-      );
-      if (existingIndex >= 0) {
-        const updated = [...prev];
-        updated[existingIndex] = newOutput;
-        return updated;
+    try {
+      // 1. Fetch Income records (Admin and Call Center Operator have permission)
+      if (currentRole === 'Admin' || currentRole === 'Call Center Operator') {
+        const { data: incomeData } = await supabase
+          .from('income_records')
+          .select('*')
+          .order('date', { ascending: false });
+        if (incomeData) setIncomes(incomeData as IncomeRecord[]);
+      } else {
+        // Designer must never see income data
+        setIncomes([]);
       }
-      return [newOutput, ...prev];
-    });
+
+      // 2. Fetch Expense records (Admin and authorized Operator have permission)
+      if (currentRole === 'Admin' || currentRole === 'Call Center Operator') {
+        const { data: expenseData } = await supabase
+          .from('expense_records')
+          .select('*')
+          .order('date', { ascending: false });
+        if (expenseData) setExpenses(expenseData as ExpenseRecord[]);
+      } else {
+        // Designer must never see expenses
+        setExpenses([]);
+      }
+
+      // 3. Fetch Daily Post Counts
+      // If Designer, RLS returns only their rows. If Admin, returns all rows.
+      const { data: postData } = await supabase
+        .from('daily_post_counts')
+        .select('*')
+        .order('date', { ascending: false });
+      if (postData) setPostCounts(postData as DailyPostCount[]);
+
+      // 4. Fetch Staff Profiles (Admin only)
+      if (currentRole === 'Admin') {
+        const { data: staffData } = await supabase
+          .from('profiles')
+          .select('*')
+          .order('created_at', { ascending: true });
+        if (staffData) setStaffList(staffData as UserProfile[]);
+      }
+    } catch (err) {
+      console.error('Data loading error:', err);
+    }
+  }, [user, currentRole]);
+
+  useEffect(() => {
+    if (user && isSupabaseConfigured) {
+      fetchData();
+    }
+  }, [user, fetchData]);
+
+  // Enforce page authorization strictly
+  useEffect(() => {
+    if (currentRole === 'Designer') {
+      if (!['dashboard', 'posts', 'settings'].includes(currentModule)) {
+        setCurrentModule('dashboard');
+      }
+    } else if (currentRole === 'Call Center Operator') {
+      if (!['dashboard', 'income', 'expenses', 'settings'].includes(currentModule)) {
+        setCurrentModule('dashboard');
+      }
+    }
+  }, [currentModule, currentRole]);
+
+  // If Auth is loading
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-white flex flex-col items-center justify-center">
+        <div className="h-12 w-12 rounded-xl bg-[#EFF6FF] border border-[#E5E7EB] flex items-center justify-center text-[#2563EB] font-black text-lg animate-pulse mb-3">
+          LP
+        </div>
+        <p className="text-xs text-gray-500 font-medium">
+          Loading Lanka Pixel Management Portal...
+        </p>
+      </div>
+    );
+  }
+
+  // If User is not signed in, show Login Screen
+  if (!user) {
+    return <LoginView />;
+  }
+
+  // Filter designers list for post logging
+  const designerStaff = staffList.filter((s) => s.role === 'Designer');
+
+  // --- Handlers for Income ---
+  const handleAddIncome = async (newIncome: Omit<IncomeRecord, 'id' | 'created_at'>) => {
+    if (supabase) {
+      const { data, error } = await supabase
+        .from('income_records')
+        .insert({
+          ...newIncome,
+          user_id: user.id,
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+      if (data) setIncomes((prev) => [data as IncomeRecord, ...prev]);
+    }
   };
 
-  const handleDeleteOutput = (id: string) => {
-    setDesignerOutputs((prev) => prev.filter((item) => item.id !== id));
+  const handleUpdateIncome = async (id: string, updates: Partial<IncomeRecord>) => {
+    if (supabase) {
+      const { error } = await supabase
+        .from('income_records')
+        .update(updates)
+        .eq('id', id);
+
+      if (error) throw error;
+      setIncomes((prev) =>
+        prev.map((item) => (item.id === id ? { ...item, ...updates } : item))
+      );
+    }
   };
 
-  // Handlers for Staff
-  const handleAddStaff = (newStaff: StaffMember) => {
-    setStaffList((prev) => [...prev, newStaff]);
+  const handleDeleteIncome = async (id: string) => {
+    if (supabase) {
+      const { error } = await supabase.from('income_records').delete().eq('id', id);
+      if (error) alert(error.message);
+      else setIncomes((prev) => prev.filter((item) => item.id !== id));
+    }
   };
 
-  const handleDeleteStaff = (id: string) => {
-    setStaffList((prev) => prev.filter((item) => item.id !== id));
+  // --- Handlers for Expenses ---
+  const handleAddExpense = async (newExpense: Omit<ExpenseRecord, 'id' | 'created_at'>) => {
+    if (supabase) {
+      const { data, error } = await supabase
+        .from('expense_records')
+        .insert({
+          ...newExpense,
+          user_id: user.id,
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+      if (data) setExpenses((prev) => [data as ExpenseRecord, ...prev]);
+    }
+  };
+
+  const handleUpdateExpense = async (id: string, updates: Partial<ExpenseRecord>) => {
+    if (supabase) {
+      const { error } = await supabase
+        .from('expense_records')
+        .update(updates)
+        .eq('id', id);
+
+      if (error) throw error;
+      setExpenses((prev) =>
+        prev.map((item) => (item.id === id ? { ...item, ...updates } : item))
+      );
+    }
+  };
+
+  const handleDeleteExpense = async (id: string) => {
+    if (supabase) {
+      const { error } = await supabase.from('expense_records').delete().eq('id', id);
+      if (error) alert(error.message);
+      else setExpenses((prev) => prev.filter((item) => item.id !== id));
+    }
+  };
+
+  // --- Handlers for Daily Post Count ---
+  const handleLogPost = async (newPost: Omit<DailyPostCount, 'id' | 'created_at'>) => {
+    if (supabase) {
+      const { data, error } = await supabase
+        .from('daily_post_counts')
+        .upsert(
+          {
+            ...newPost,
+          },
+          { onConflict: 'date,designer_id' }
+        )
+        .select()
+        .single();
+
+      if (error) throw error;
+      if (data) {
+        setPostCounts((prev) => {
+          const index = prev.findIndex(
+            (p) => p.date === data.date && p.designer_id === data.designer_id
+          );
+          if (index >= 0) {
+            const updated = [...prev];
+            updated[index] = data as DailyPostCount;
+            return updated;
+          }
+          return [data as DailyPostCount, ...prev];
+        });
+      }
+    }
+  };
+
+  const handleUpdatePost = async (id: string, updates: Partial<DailyPostCount>) => {
+    if (supabase) {
+      const { error } = await supabase
+        .from('daily_post_counts')
+        .update(updates)
+        .eq('id', id);
+
+      if (error) throw error;
+      setPostCounts((prev) =>
+        prev.map((item) => (item.id === id ? { ...item, ...updates } : item))
+      );
+    }
+  };
+
+  const handleDeletePost = async (id: string) => {
+    if (supabase) {
+      const { error } = await supabase.from('daily_post_counts').delete().eq('id', id);
+      if (error) alert(error.message);
+      else setPostCounts((prev) => prev.filter((item) => item.id !== id));
+    }
+  };
+
+  // --- Handlers for Staff Management ---
+  const handleUpdateStaffRole = async (id: string, newRole: UserRole) => {
+    if (supabase) {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ role: newRole, updated_at: new Date().toISOString() })
+        .eq('id', id);
+
+      if (error) alert(error.message);
+      else {
+        setStaffList((prev) =>
+          prev.map((s) => (s.id === id ? { ...s, role: newRole } : s))
+        );
+      }
+    }
+  };
+
+  const handleToggleStaffStatus = async (
+    id: string,
+    currentStatus: 'Active' | 'Deactivated'
+  ) => {
+    const nextStatus = currentStatus === 'Active' ? 'Deactivated' : 'Active';
+    if (supabase) {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ status: nextStatus, updated_at: new Date().toISOString() })
+        .eq('id', id);
+
+      if (error) alert(error.message);
+      else {
+        setStaffList((prev) =>
+          prev.map((s) => (s.id === id ? { ...s, status: nextStatus } : s))
+        );
+      }
+    }
   };
 
   return (
-    <div className="flex min-h-screen bg-[#07090e] text-slate-100 font-sans">
-      {/* Sidebar Navigation */}
+    <div className="flex min-h-screen bg-white text-[#111827] font-sans">
+      {/* Simple Sidebar */}
       <Sidebar
         currentModule={currentModule}
         onSelectModule={setCurrentModule}
         currentRole={currentRole}
-        pendingIncomeCount={pendingIncomeCount}
       />
 
       {/* Main Content Area */}
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className="flex-1 flex flex-col min-w-0 bg-white">
         <Header
           currentModule={currentModule}
           currentRole={currentRole}
-          onRoleChange={setCurrentRole}
-          referenceDate={referenceDate}
-          onOpenAddIncome={() => setIsAddIncomeOpen(true)}
-          onOpenAddExpense={() => setIsAddExpenseOpen(true)}
-          onOpenLogOutput={() => setIsLogOutputOpen(true)}
+          onOpenSetup={() => setIsSetupOpen(true)}
         />
 
         <main className="flex-1 p-6 max-w-7xl w-full mx-auto">
           {currentModule === 'dashboard' && (
             <DashboardView
-              calculations={calculations}
-              recentIncomes={incomes}
-              recentExpenses={expenses}
-              designerOutputs={designerOutputs}
+              todayStr={todayStr}
+              currentMonthStr={currentMonthStr}
               currentRole={currentRole}
-              referenceDate={referenceDate}
+              incomes={incomes}
+              expenses={expenses}
+              postCounts={postCounts}
+              staffList={staffList}
               onNavigate={setCurrentModule}
-              onOpenAddIncome={() => setIsAddIncomeOpen(true)}
-              onOpenAddExpense={() => setIsAddExpenseOpen(true)}
-              onOpenLogOutput={() => setIsLogOutputOpen(true)}
+              onOpenAddIncome={() => {
+                setEditingIncome(null);
+                setIsAddIncomeOpen(true);
+              }}
+              onOpenAddExpense={() => {
+                setEditingExpense(null);
+                setIsAddExpenseOpen(true);
+              }}
+              onOpenLogPost={() => {
+                setEditingPost(null);
+                setIsLogPostOpen(true);
+              }}
             />
           )}
 
           {currentModule === 'income' && (
             <IncomeView
               incomes={incomes}
-              calculations={calculations}
               currentRole={currentRole}
-              referenceDate={referenceDate}
-              onOpenAddIncome={() => setIsAddIncomeOpen(true)}
-              onToggleStatus={handleToggleIncomeStatus}
+              onOpenAddIncome={() => {
+                setEditingIncome(null);
+                setIsAddIncomeOpen(true);
+              }}
+              onEditIncome={(inc) => {
+                setEditingIncome(inc);
+                setIsAddIncomeOpen(true);
+              }}
               onDeleteIncome={handleDeleteIncome}
+            />
+          )}
+
+          {currentModule === 'posts' && (
+            <DailyPostCountView
+              postCounts={postCounts}
+              designers={designerStaff}
+              currentRole={currentRole}
+              onOpenLogPost={() => {
+                setEditingPost(null);
+                setIsLogPostOpen(true);
+              }}
+              onEditPost={(post) => {
+                setEditingPost(post);
+                setIsLogPostOpen(true);
+              }}
+              onDeletePost={handleDeletePost}
             />
           )}
 
           {currentModule === 'expenses' && (
             <ExpensesView
               expenses={expenses}
-              calculations={calculations}
               currentRole={currentRole}
-              referenceDate={referenceDate}
-              onOpenAddExpense={() => setIsAddExpenseOpen(true)}
+              onOpenAddExpense={() => {
+                setEditingExpense(null);
+                setIsAddExpenseOpen(true);
+              }}
+              onEditExpense={(exp) => {
+                setEditingExpense(exp);
+                setIsAddExpenseOpen(true);
+              }}
               onDeleteExpense={handleDeleteExpense}
-            />
-          )}
-
-          {currentModule === 'staff' && (
-            <StaffView
-              staffList={staffList}
-              currentRole={currentRole}
-              onOpenAddStaff={() => setIsAddStaffOpen(true)}
-              onDeleteStaff={handleDeleteStaff}
-            />
-          )}
-
-          {currentModule === 'designer-performance' && (
-            <DesignerPerformanceView
-              designerOutputs={designerOutputs}
-              designers={designers}
-              currentRole={currentRole}
-              referenceDate={referenceDate}
-              onOpenLogOutput={() => setIsLogOutputOpen(true)}
-              onDeleteOutput={handleDeleteOutput}
             />
           )}
 
           {currentModule === 'reports' && (
             <ReportsView
-              calculations={calculations}
               incomes={incomes}
               expenses={expenses}
-              designerOutputs={designerOutputs}
-              referenceDate={referenceDate}
+              postCounts={postCounts}
+            />
+          )}
+
+          {currentModule === 'staff' && (
+            <StaffManagementView
+              staffList={staffList}
+              onOpenAddStaff={() => setIsAddStaffOpen(true)}
+              onUpdateRole={handleUpdateStaffRole}
+              onToggleStatus={handleToggleStaffStatus}
             />
           )}
 
           {currentModule === 'settings' && (
-            <SettingsView currentRole={currentRole} />
+            <SettingsView
+              currentRole={currentRole}
+              onOpenSetup={() => setIsSetupOpen(true)}
+            />
           )}
         </main>
       </div>
 
-      {/* Global Interactive Modals */}
+      {/* Interactive Modals */}
       <AddIncomeModal
         isOpen={isAddIncomeOpen}
-        onClose={() => setIsAddIncomeOpen(false)}
+        onClose={() => {
+          setIsAddIncomeOpen(false);
+          setEditingIncome(null);
+        }}
         onAddIncome={handleAddIncome}
-        referenceDate={referenceDate}
-        recordedBy={
-          currentRole === 'Admin'
-            ? 'Kasun Jayawardena (Admin)'
-            : 'Sanduni Wickramasinghe (Call Center)'
-        }
+        editingRecord={editingIncome}
+        onUpdateIncome={handleUpdateIncome}
       />
 
       <AddExpenseModal
         isOpen={isAddExpenseOpen}
-        onClose={() => setIsAddExpenseOpen(false)}
+        onClose={() => {
+          setIsAddExpenseOpen(false);
+          setEditingExpense(null);
+        }}
         onAddExpense={handleAddExpense}
-        referenceDate={referenceDate}
-        approvedBy="Kasun Jayawardena (Managing Director)"
+        editingRecord={editingExpense}
+        onUpdateExpense={handleUpdateExpense}
       />
 
-      <LogOutputModal
-        isOpen={isLogOutputOpen}
-        onClose={() => setIsLogOutputOpen(false)}
-        onLogOutput={handleLogOutput}
-        designers={designers}
-        referenceDate={referenceDate}
+      <LogPostModal
+        isOpen={isLogPostOpen}
+        onClose={() => {
+          setIsLogPostOpen(false);
+          setEditingPost(null);
+        }}
+        onLogPost={handleLogPost}
+        designers={designerStaff}
+        currentRole={currentRole}
+        editingRecord={editingPost}
+        onUpdatePost={handleUpdatePost}
       />
 
       <AddStaffModal
         isOpen={isAddStaffOpen}
         onClose={() => setIsAddStaffOpen(false)}
-        onAddStaff={handleAddStaff}
+        onStaffAdded={fetchData}
+      />
+
+      <SupabaseSetupModal
+        isOpen={isSetupOpen}
+        onClose={() => setIsSetupOpen(false)}
       />
     </div>
+  );
+};
+
+export const App: React.FC = () => {
+  return (
+    <AuthProvider>
+      <MainApp />
+    </AuthProvider>
   );
 };
 
