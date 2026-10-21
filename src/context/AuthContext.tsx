@@ -1,6 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import type { User } from '@supabase/supabase-js';
-import { createClient } from '@supabase/supabase-js';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import type { UserProfile, UserRole } from '../types';
 
@@ -178,7 +177,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  // Secure admin staff account creation using an isolated client so admin session is not lost
+  // Secure admin staff account creation using the server-side create-staff Edge Function
   const createStaffAccount = async (
     email: string,
     password: string,
@@ -186,75 +185,65 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     role: UserRole
   ): Promise<{ error: string | null }> => {
     if (!isSupabaseConfigured || !supabase) {
-      return { error: 'Supabase is not configured yet.' };
+      return { error: 'Database connection is not configured yet. Please check your credentials.' };
     }
 
-    const effectiveUrl =
-      localStorage.getItem('lp_supabase_url') ||
-      (import.meta.env.VITE_SUPABASE_URL as string) ||
-      '';
-    const effectiveKey =
-      localStorage.getItem('lp_supabase_anon_key') ||
-      (import.meta.env.VITE_SUPABASE_ANON_KEY as string) ||
-      '';
-
     try {
-      // 1. First attempt provisioning via the secure create-staff Edge Function
-      try {
-        const { data: funcData, error: funcError } = await supabase.functions.invoke('create-staff', {
-          body: { email: email.trim(), password, fullName: fullName.trim(), role },
-        });
-
-        if (!funcError && funcData?.success) {
-          return { error: null };
-        }
-        // If function returned an explicit validation error from backend, return it
-        if (funcError && funcError.message && !funcError.message.includes('Failed to send a request') && !funcError.message.includes('not found')) {
-          return { error: funcError.message };
-        }
-      } catch (funcErr) {
-        // Fall back to client-side secondary client provisioning if Edge Function not deployed
-        console.info('Edge function create-staff not available, using client-side fallback:', funcErr);
+      // 1. Verify that current session is active before making the call
+      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError || !sessionData?.session) {
+        return { error: 'Your administrator session has expired. Please sign in again.' };
       }
 
-      // 2. Client-side isolated provisioning fallback
-      const secondaryClient = createClient(effectiveUrl, effectiveKey, {
-        auth: {
-          persistSession: false,
-          autoRefreshToken: false,
-          detectSessionInUrl: false,
-        },
-      });
-
-      const { data, error: signUpError } = await secondaryClient.auth.signUp({
-        email: email.trim(),
-        password,
-        options: {
-          data: {
-            full_name: fullName.trim(),
-            role,
-          },
-        },
-      });
-
-      if (signUpError) {
-        return { error: signUpError.message };
-      }
-
-      if (data.user) {
-        // Admin upserts profile record in public.profiles table
-        const { error: profileError } = await supabase.from('profiles').upsert({
-          id: data.user.id,
+      // 2. Invoke the server-side create-staff Edge Function
+      const { data: funcData, error: funcError } = await supabase.functions.invoke('create-staff', {
+        body: {
           email: email.trim(),
-          full_name: fullName.trim(),
+          password,
+          fullName: fullName.trim(),
           role,
-          status: 'Active',
-          updated_at: new Date().toISOString(),
-        });
+        },
+      });
 
-        if (profileError) {
-          console.warn('Profile upsert note:', profileError);
+      // 3. Handle function execution errors
+      if (funcError) {
+        let message = funcError.message;
+
+        // Extract detailed JSON error response body from FunctionsHttpError if available
+        if ('context' in funcError && funcError.context) {
+          try {
+            const response = funcError.context as Response;
+            // Clone or read json
+            const resJson = await response.json();
+            if (resJson?.error) {
+              message = resJson.error;
+            } else if (resJson?.message) {
+              message = resJson.message;
+            }
+          } catch {
+            // Context was not valid JSON
+          }
         }
+
+        // Detect un-deployed Edge Function or CORS gateway rejection
+        if (
+          message.includes('Failed to send a request') ||
+          message.includes('Failed to fetch') ||
+          message.includes('CORS')
+        ) {
+          message =
+            'The "create-staff" Edge Function is not responding (CORS/Network error). Ensure the function is deployed to your Supabase project using: npx supabase functions deploy create-staff --no-verify-jwt';
+        } else if (message.includes('Requested function was not found') || message.includes('404')) {
+          message =
+            'The "create-staff" Edge Function is not yet deployed in your Supabase project. Deploy it using: npx supabase functions deploy create-staff --project-ref izcdagjeygjhxvgaywdz --no-verify-jwt --use-api';
+        }
+
+        return { error: message };
+      }
+
+      // 4. Check for logical failure in response payload
+      if (!funcData || !funcData.success) {
+        return { error: funcData?.error || 'Staff account creation failed on server.' };
       }
 
       return { error: null };
