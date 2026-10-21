@@ -14,6 +14,7 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 // Layout
 import { Sidebar } from './components/layout/Sidebar';
 import { Header } from './components/layout/Header';
+import { BottomNav } from './components/layout/BottomNav';
 
 // Views
 import { LoginView } from './components/auth/LoginView';
@@ -41,6 +42,7 @@ const MainApp: React.FC = () => {
 
   // Navigation
   const [currentModule, setCurrentModule] = useState<NavigationModule>('dashboard');
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
 
   // Supabase Data State
   const [incomes, setIncomes] = useState<IncomeRecord[]>([]);
@@ -133,13 +135,18 @@ const MainApp: React.FC = () => {
   // If Auth is loading
   if (authLoading) {
     return (
-      <div className="min-h-screen bg-white flex flex-col items-center justify-center">
-        <div className="h-12 w-12 rounded-xl bg-[#EFF6FF] border border-[#E5E7EB] flex items-center justify-center text-[#2563EB] font-black text-lg animate-pulse mb-3">
-          LP
+      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-4">
+        <div className="p-3 bg-white rounded-2xl shadow-sm border border-gray-200/80 mb-4 animate-pulse">
+          <img
+            src="/logo.png"
+            alt="Lanka Pixel Creations"
+            className="h-16 w-16 object-contain"
+          />
         </div>
-        <p className="text-xs text-gray-500 font-medium">
-          Loading Lanka Pixel Management Portal...
-        </p>
+        <div className="flex items-center gap-2 text-xs font-semibold text-gray-700">
+          <div className="w-2 h-2 rounded-full bg-[#2563EB] animate-ping" />
+          <span>Loading Lanka Pixel Management Portal...</span>
+        </div>
       </div>
     );
   }
@@ -321,23 +328,26 @@ const MainApp: React.FC = () => {
   };
 
   return (
-    <div className="flex min-h-screen bg-white text-[#111827] font-sans">
-      {/* Simple Sidebar */}
+    <div className="flex min-h-screen bg-slate-50 text-[#111827] font-sans relative">
+      {/* Sidebar (Desktop & Mobile Drawer) */}
       <Sidebar
         currentModule={currentModule}
         onSelectModule={setCurrentModule}
         currentRole={currentRole}
+        isOpenMobile={isMobileSidebarOpen}
+        onCloseMobile={() => setIsMobileSidebarOpen(false)}
       />
 
       {/* Main Content Area */}
-      <div className="flex-1 flex flex-col min-w-0 bg-white">
+      <div className="flex-1 flex flex-col min-w-0 bg-slate-50">
         <Header
           currentModule={currentModule}
           currentRole={currentRole}
           onOpenSetup={() => setIsSetupOpen(true)}
+          onToggleMobileSidebar={() => setIsMobileSidebarOpen((prev) => !prev)}
         />
 
-        <main className="flex-1 p-6 max-w-7xl w-full mx-auto">
+        <main className="flex-1 p-3.5 sm:p-6 pb-20 lg:pb-8 max-w-7xl w-full mx-auto">
           {currentModule === 'dashboard' && (
             <DashboardView
               todayStr={todayStr}
@@ -436,6 +446,14 @@ const MainApp: React.FC = () => {
             />
           )}
         </main>
+
+        {/* Mobile Bottom Navigation Bar */}
+        <BottomNav
+          currentModule={currentModule}
+          onSelectModule={setCurrentModule}
+          currentRole={currentRole}
+          onOpenMobileMenu={() => setIsMobileSidebarOpen(true)}
+        />
       </div>
 
       {/* Interactive Modals */}

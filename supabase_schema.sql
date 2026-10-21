@@ -203,28 +203,10 @@ LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = ''
 AS $$
-DECLARE
-  v_is_initial_bootstrap pg_catalog.bool := false;
-  v_is_authorized pg_catalog.bool := false;
 BEGIN
-  -- 1. Initial Admin bootstrap authorization:
-  -- Permitted ONLY if initiated by assign_initial_admin() in this transaction,
-  -- executed by a database administrator (postgres/supabase_admin), AND zero Admins exist.
-  IF pg_catalog.current_setting('lp.in_initial_admin_setup', true) = 'true' THEN
-    IF pg_catalog.session_user IN ('postgres', 'supabase_admin') AND NOT EXISTS (SELECT 1 FROM public.profiles WHERE role = 'Admin') THEN
-      v_is_initial_bootstrap := true;
-    END IF;
-  END IF;
-
-  -- 2. Standard administrative authorization (Active Admin JWT, service_role, or direct DBA)
-  IF v_is_initial_bootstrap 
-     OR public.is_admin_or_service_role() 
-     OR pg_catalog.session_user IN ('postgres', 'supabase_admin') THEN
-    v_is_authorized := true;
-  END IF;
-
-  -- If caller is not authorized, strictly block role, status, id, and email modifications
-  IF NOT v_is_authorized THEN
+  -- Strictly enforce that only active Administrators or trusted service_role processes
+  -- may modify staff roles, account status, user identifier, or corporate email.
+  IF NOT public.is_admin_or_service_role() THEN
     IF NEW.role IS DISTINCT FROM OLD.role THEN
       RAISE EXCEPTION 'Security Policy Violation: Only Administrators may modify staff roles.';
     END IF;
@@ -346,8 +328,8 @@ BEGIN
     RAISE EXCEPTION 'User with email % does not exist in profiles. Please create the user account in Supabase Auth first, then execute this command.', p_email;
   END IF;
 
-  -- Set transaction-local flag authorizing the initial bootstrap promotion
-  PERFORM pg_catalog.set_config('lp.in_initial_admin_setup', 'true', true);
+  -- Temporarily disable the profile protection trigger for this atomic update
+  ALTER TABLE public.profiles DISABLE TRIGGER trg_check_profile_updates;
 
   UPDATE public.profiles
   SET
@@ -356,7 +338,15 @@ BEGIN
     updated_at = pg_catalog.now()
   WHERE id = v_user_id;
 
+  -- Immediately re-enable the profile protection trigger
+  ALTER TABLE public.profiles ENABLE TRIGGER trg_check_profile_updates;
+
   RAISE NOTICE 'Success: User % (ID: %) has been securely granted the initial Admin role.', p_email, v_user_id;
+EXCEPTION
+  WHEN OTHERS THEN
+    -- Guarantee the trigger is re-enabled if any error occurs
+    ALTER TABLE public.profiles ENABLE TRIGGER trg_check_profile_updates;
+    RAISE;
 END;
 $$;
 

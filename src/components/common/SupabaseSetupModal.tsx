@@ -36,8 +36,8 @@ export const SupabaseSetupModal: React.FC<SupabaseSetupModalProps> = ({ isOpen, 
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs">
-      <div className="bg-white rounded-xl border border-[#E5E7EB] shadow-xl max-w-2xl w-full max-h-[90vh] flex flex-col overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/40 backdrop-blur-xs overflow-y-auto">
+      <div className="bg-white rounded-2xl border border-[#E5E7EB] shadow-xl max-w-2xl w-full max-h-[92vh] flex flex-col overflow-hidden my-auto">
         {/* Header */}
         <div className="px-6 py-4 border-b border-[#E5E7EB] flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -46,7 +46,7 @@ export const SupabaseSetupModal: React.FC<SupabaseSetupModalProps> = ({ isOpen, 
             </div>
             <div>
               <h3 className="text-base font-bold text-[#111827]">
-                Supabase Database & Auth Configuration
+                Database & Cloud Infrastructure Configuration
               </h3>
               <p className="text-xs text-gray-500">
                 LANKA PIXEL CREATIONS (PVT) LTD Management Portal

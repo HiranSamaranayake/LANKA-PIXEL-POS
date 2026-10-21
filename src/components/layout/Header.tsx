@@ -1,21 +1,20 @@
 import React from 'react';
-import { Calendar, Database, ShieldCheck, Headphones, Brush } from 'lucide-react';
+import { Calendar, ShieldCheck, Headphones, Brush, Menu } from 'lucide-react';
 import type { NavigationModule, UserRole } from '../../types';
 import { formatDate, getColomboToday } from '../../utils/formatters';
-import { useAuth } from '../../context/AuthContext';
 
 interface HeaderProps {
   currentModule: NavigationModule;
   currentRole: UserRole;
-  onOpenSetup: () => void;
+  onOpenSetup?: () => void;
+  onToggleMobileSidebar?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
   currentModule,
   currentRole,
-  onOpenSetup,
+  onToggleMobileSidebar,
 }) => {
-  const { isConfigured } = useAuth();
   const todayStr = getColomboToday();
 
   const getModuleMeta = () => {
@@ -77,41 +76,52 @@ export const Header: React.FC<HeaderProps> = ({
   };
 
   return (
-    <header className="bg-white border-b border-[#E5E7EB] px-6 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 sticky top-0 z-20">
-      <div>
-        <h2 className="text-lg font-bold text-[#111827] tracking-tight">{title}</h2>
-        <p className="text-xs text-gray-500 mt-0.5">{subtitle}</p>
+    <header className="bg-white border-b border-[#E5E7EB] px-3.5 py-3 sm:px-6 sm:py-4 flex items-center justify-between gap-3 sticky top-0 z-30">
+      {/* Left: Mobile Hamburger & Title */}
+      <div className="flex items-center gap-2.5 min-w-0">
+        <button
+          type="button"
+          onClick={onToggleMobileSidebar}
+          className="p-2 -ml-1 rounded-xl border border-[#E5E7EB] hover:bg-gray-100 text-gray-700 transition-colors lg:hidden shrink-0"
+          aria-label="Open Navigation Menu"
+        >
+          <Menu className="h-5 w-5" />
+        </button>
+
+        <div className="min-w-0">
+          <h2 className="text-sm sm:text-lg font-bold text-[#111827] tracking-tight truncate">
+            {title}
+          </h2>
+          <p className="text-[11px] sm:text-xs text-gray-500 mt-0.5 truncate hidden md:block">
+            {subtitle}
+          </p>
+        </div>
       </div>
 
-      <div className="flex flex-wrap items-center gap-3">
+      {/* Right: Badges & Status */}
+      <div className="flex items-center gap-2 sm:gap-3 shrink-0">
         {/* Date Display */}
-        <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gray-50 border border-[#E5E7EB] text-xs text-gray-700 font-medium">
+        <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gray-50 border border-[#E5E7EB] text-xs text-gray-700 font-medium">
           <Calendar className="h-3.5 w-3.5 text-gray-400" />
           <span>{formatDate(todayStr)}</span>
         </div>
 
         {/* Role Badge */}
-        <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#EFF6FF] border border-blue-200 text-xs text-[#2563EB] font-semibold">
+        <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-[#EFF6FF] border border-blue-200 text-xs text-[#2563EB] font-semibold">
           {getRoleIcon()}
-          <span>{currentRole}</span>
+          <span className="hidden xs:inline">{currentRole}</span>
         </div>
 
-        {/* Database Connection Pill */}
-        <button
-          onClick={onOpenSetup}
-          className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-medium transition-colors ${
-            isConfigured
-              ? 'bg-white border-[#E5E7EB] text-gray-600 hover:bg-gray-50'
-              : 'bg-amber-50 border-amber-200 text-amber-800 hover:bg-amber-100'
-          }`}
-          title="Supabase Database Configuration"
-        >
-          <Database className={`h-3.5 w-3.5 ${isConfigured ? 'text-blue-500' : 'text-amber-600'}`} />
-          <span className="text-[11px] font-semibold">
-            {isConfigured ? 'Supabase Connected' : 'Configure Supabase'}
+        {/* Portal Status Pill */}
+        <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-gray-50 border border-[#E5E7EB] text-xs font-medium text-gray-700">
+          <span className="relative flex h-2 w-2">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+            <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
           </span>
-        </button>
+          <span className="text-[11px] font-semibold text-gray-600 hidden xs:inline">Online</span>
+        </div>
       </div>
     </header>
   );
 };
+

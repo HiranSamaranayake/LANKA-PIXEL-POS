@@ -87,10 +87,10 @@ export const AddIncomeModal: React.FC<AddIncomeModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs">
-      <div className="bg-white rounded-xl border border-[#E5E7EB] shadow-xl max-w-md w-full overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/40 backdrop-blur-xs overflow-y-auto">
+      <div className="bg-white rounded-2xl border border-[#E5E7EB] shadow-xl max-w-md w-full max-h-[92vh] flex flex-col overflow-hidden my-auto">
         {/* Header */}
-        <div className="px-6 py-4 border-b border-[#E5E7EB] flex items-center justify-between">
+        <div className="px-5 py-3.5 sm:px-6 sm:py-4 border-b border-[#E5E7EB] flex items-center justify-between shrink-0">
           <div>
             <h3 className="text-sm font-bold text-[#111827]">
               {editingRecord ? 'Edit Income Record' : 'Record Daily Income'}
@@ -108,12 +108,12 @@ export const AddIncomeModal: React.FC<AddIncomeModalProps> = ({
         </div>
 
         {errorMsg && (
-          <div className="mx-6 mt-4 p-3 rounded-lg bg-red-50 border border-red-200 text-xs text-red-700">
+          <div className="mx-5 sm:mx-6 mt-3 p-3 rounded-xl bg-red-50 border border-red-200 text-xs text-red-700 shrink-0">
             {errorMsg}
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-4 text-xs">
+        <form onSubmit={handleSubmit} className="p-5 sm:p-6 space-y-4 text-xs overflow-y-auto">
           {/* 1. Date */}
           <div>
             <label className="block text-xs font-semibold text-[#111827] mb-1">

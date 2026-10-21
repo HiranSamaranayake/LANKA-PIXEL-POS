@@ -31,12 +31,12 @@ export const DesignerDashboard: React.FC<DesignerDashboardProps> = ({
   return (
     <div className="space-y-6">
       {/* Designer Banner */}
-      <div className="bg-white p-6 rounded-xl border border-[#E5E7EB] shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="bg-white p-4 sm:p-6 rounded-xl border border-[#E5E7EB] shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <span className="inline-block text-[10px] font-bold uppercase tracking-wider text-[#2563EB] bg-[#EFF6FF] px-2.5 py-0.5 rounded-full mb-1">
             Studio Designer Workspace
           </span>
-          <h2 className="text-lg font-bold text-[#111827]">
+          <h2 className="text-base sm:text-lg font-bold text-[#111827]">
             Welcome, {designerName}
           </h2>
           <p className="text-xs text-gray-500 mt-0.5">
@@ -46,7 +46,7 @@ export const DesignerDashboard: React.FC<DesignerDashboardProps> = ({
 
         <button
           onClick={onOpenLogPost}
-          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-[#60A5FA] hover:bg-blue-500 text-white font-bold text-xs transition-colors shadow-2xs shrink-0"
+          className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-[#60A5FA] hover:bg-blue-500 text-white font-bold text-xs transition-colors shadow-2xs shrink-0"
         >
           <PlusCircle className="h-4 w-4" />
           <span>{todayEntry ? 'Update Today\'s Count' : 'Log Today\'s Posts'}</span>
@@ -54,7 +54,7 @@ export const DesignerDashboard: React.FC<DesignerDashboardProps> = ({
       </div>
 
       {/* Summary Cards (Only post count metrics, ZERO financial data) */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
         {/* Today's Posts */}
         <div className="bg-white p-5 rounded-xl border border-[#E5E7EB] shadow-2xs">
           <div className="flex items-center justify-between text-xs text-gray-500 mb-1">

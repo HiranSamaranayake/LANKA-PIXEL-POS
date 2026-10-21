@@ -51,10 +51,12 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
-          <div className="flex items-center gap-1.5 text-xs text-gray-700 font-medium">
-            <Calendar className="h-4 w-4 text-gray-400" />
-            <span>Select Month:</span>
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
+          <div className="flex items-center justify-between sm:justify-start gap-1.5 text-xs text-gray-700 font-medium">
+            <div className="flex items-center gap-1.5">
+              <Calendar className="h-4 w-4 text-gray-400" />
+              <span>Month:</span>
+            </div>
             <input
               type="month"
               value={selectedMonth}
@@ -65,7 +67,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
 
           <button
             onClick={() => window.print()}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#E5E7EB] bg-white hover:bg-gray-50 text-gray-700 text-xs font-semibold transition-colors shadow-2xs"
+            className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#E5E7EB] bg-white hover:bg-gray-50 text-gray-700 text-xs font-semibold transition-colors shadow-2xs"
           >
             <Download className="h-3.5 w-3.5 text-gray-500" />
             <span>Print Report</span>

@@ -126,7 +126,7 @@ export const DailyPostCountView: React.FC<DailyPostCountViewProps> = ({
           </div>
           <button
             onClick={onOpenLogPost}
-            className="mt-3 inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[#60A5FA] hover:bg-blue-500 text-white font-bold text-xs transition-colors shadow-2xs self-start"
+            className="mt-3 inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-[#60A5FA] hover:bg-blue-500 text-white font-bold text-xs transition-colors shadow-2xs w-full sm:w-auto self-stretch sm:self-start"
           >
             <PlusCircle className="h-4 w-4" />
             <span>Log Daily Post Count</span>

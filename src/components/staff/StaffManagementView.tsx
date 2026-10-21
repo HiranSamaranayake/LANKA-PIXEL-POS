@@ -59,7 +59,7 @@ export const StaffManagementView: React.FC<StaffManagementViewProps> = ({
   return (
     <div className="space-y-6">
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
         {/* Total Staff */}
         <div className="bg-white p-5 rounded-xl border border-[#E5E7EB] shadow-2xs">
           <div className="flex items-center justify-between text-xs text-gray-500 mb-1">
@@ -70,7 +70,7 @@ export const StaffManagementView: React.FC<StaffManagementViewProps> = ({
             {staffList.length}
           </div>
           <p className="text-[11px] text-gray-400 mt-1">
-            Stored in Supabase PostgreSQL
+            Verified employee directory
           </p>
         </div>
 
