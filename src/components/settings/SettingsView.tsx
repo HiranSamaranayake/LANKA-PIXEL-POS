@@ -1,15 +1,15 @@
 import React, { useState } from 'react';
-import { Building2, Lock, Database, CheckCircle2, AlertCircle, Shield } from 'lucide-react';
+import { Building2, Lock, CheckCircle2, AlertCircle } from 'lucide-react';
 import type { UserRole } from '../../types';
 import { useAuth } from '../../context/AuthContext';
-import { supabase, isSupabaseConfigured } from '../../lib/supabase';
+import { supabase } from '../../lib/supabase';
 
 interface SettingsViewProps {
   currentRole: UserRole;
-  onOpenSetup: () => void;
+  onOpenSetup?: () => void;
 }
 
-export const SettingsView: React.FC<SettingsViewProps> = ({ currentRole, onOpenSetup }) => {
+export const SettingsView: React.FC<SettingsViewProps> = ({ currentRole }) => {
   const { profile, user } = useAuth();
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -31,7 +31,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ currentRole, onOpenS
     }
 
     if (!supabase) {
-      setPasswordMsg({ type: 'error', text: 'Supabase is not configured yet.' });
+      setPasswordMsg({ type: 'error', text: 'Authentication service is not available.' });
       return;
     }
 
@@ -63,7 +63,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ currentRole, onOpenS
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Company Profile (Read-only or Admin config) */}
+        {/* Company Profile */}
         <div className="bg-white p-6 rounded-xl border border-[#E5E7EB] shadow-2xs space-y-4">
           <div className="flex items-center gap-2 pb-3 border-b border-[#E5E7EB]">
             <Building2 className="h-4 w-4 text-[#2563EB]" />
@@ -187,47 +187,14 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ currentRole, onOpenS
             <button
               type="submit"
               disabled={passwordLoading}
-              className="px-4 py-2 rounded-lg bg-[#60A5FA] hover:bg-blue-500 text-white font-bold transition-colors shadow-2xs disabled:opacity-50"
+              className="px-4 py-2 rounded-lg bg-[#60A5FA] hover:bg-blue-500 text-white font-bold transition-colors shadow-2xs disabled:opacity-50 cursor-pointer"
             >
               {passwordLoading ? 'Updating Password...' : 'Update Password'}
             </button>
           </form>
         </div>
       </div>
-
-      {/* Cloud & Database Connection Card */}
-      <div className="bg-white p-6 rounded-xl border border-[#E5E7EB] shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <div className="p-3 rounded-xl bg-blue-50 text-[#2563EB]">
-            <Database className="h-5 w-5" />
-          </div>
-          <div>
-            <h4 className="text-xs font-bold text-[#111827] uppercase tracking-wider">
-              Cloud & Database Infrastructure
-            </h4>
-            <div className="flex items-center gap-2 mt-1">
-              <span
-                className={`inline-block w-2 h-2 rounded-full ${
-                  isSupabaseConfigured ? 'bg-emerald-500' : 'bg-amber-500'
-                }`}
-              />
-              <span className="text-xs text-gray-600 font-medium">
-                {isSupabaseConfigured
-                  ? 'Connected & Synchronized'
-                  : 'Pending Configuration'}
-              </span>
-            </div>
-          </div>
-        </div>
-
-        <button
-          onClick={onOpenSetup}
-          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl border border-[#E5E7EB] bg-white hover:bg-gray-50 text-gray-700 text-xs font-bold transition-all shadow-2xs"
-        >
-          <Shield className="h-3.5 w-3.5 text-blue-600" />
-          <span>Database Configuration</span>
-        </button>
-      </div>
     </div>
   );
 };
+
