@@ -146,6 +146,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
         setUser(data.user);
         setProfile(p);
+
+        try {
+          sessionStorage.setItem('lp_login_welcome_for', data.user.id);
+          sessionStorage.setItem('lp_login_welcome_role', p?.role || 'Admin');
+          sessionStorage.setItem('lp_login_welcome_name', p?.full_name || '');
+        } catch {
+          // Ignore if storage is disabled
+        }
       }
 
       return { error: null };
@@ -157,6 +165,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const signOut = async () => {
     if (supabase) {
       await supabase.auth.signOut();
+    }
+    try {
+      sessionStorage.removeItem('lp_login_welcome_for');
+      sessionStorage.removeItem('lp_login_welcome_role');
+      sessionStorage.removeItem('lp_login_welcome_name');
+    } catch {
+      // Ignore
     }
     setUser(null);
     setProfile(null);

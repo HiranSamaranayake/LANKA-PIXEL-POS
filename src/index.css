@@ -106,3 +106,317 @@
   animation: introPulseGlow 3s ease-in-out infinite;
 }
 
+/* Creative Pastel Graphic Background Animations */
+@keyframes lpBlobDrift1 {
+  0% {
+    transform: translate(0px, 0px) scale(1);
+  }
+  33% {
+    transform: translate(35px, -25px) scale(1.06);
+  }
+  66% {
+    transform: translate(-20px, 35px) scale(0.95);
+  }
+  100% {
+    transform: translate(0px, 0px) scale(1);
+  }
+}
+
+@keyframes lpBlobDrift2 {
+  0% {
+    transform: translate(0px, 0px) scale(1);
+  }
+  33% {
+    transform: translate(-30px, 30px) scale(1.08);
+  }
+  66% {
+    transform: translate(25px, -20px) scale(0.94);
+  }
+  100% {
+    transform: translate(0px, 0px) scale(1);
+  }
+}
+
+@keyframes lpBlobDrift3 {
+  0% {
+    transform: translate(0px, 0px) scale(1);
+  }
+  33% {
+    transform: translate(25px, 20px) scale(1.05);
+  }
+  66% {
+    transform: translate(-30px, -25px) scale(0.96);
+  }
+  100% {
+    transform: translate(0px, 0px) scale(1);
+  }
+}
+
+@keyframes lpBlobDrift4 {
+  0% {
+    transform: translate(0px, 0px) scale(1);
+  }
+  33% {
+    transform: translate(-25px, -30px) scale(1.07);
+  }
+  66% {
+    transform: translate(30px, 20px) scale(0.95);
+  }
+  100% {
+    transform: translate(0px, 0px) scale(1);
+  }
+}
+
+@keyframes lpSpinSlow {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes lpWaveSway {
+  0% {
+    transform: translate(0, 0) scale(1);
+  }
+  50% {
+    transform: translate(-15px, 12px) scale(1.02);
+  }
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+}
+
+@keyframes lpFloatGentle {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+@keyframes lpFloatSubtle {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-5px);
+  }
+}
+
+.animate-lp-blob-1 {
+  animation: lpBlobDrift1 22s ease-in-out infinite;
+  will-change: transform;
+}
+
+.animate-lp-blob-2 {
+  animation: lpBlobDrift2 26s ease-in-out infinite;
+  will-change: transform;
+}
+
+.animate-lp-blob-3 {
+  animation: lpBlobDrift3 28s ease-in-out infinite;
+  will-change: transform;
+}
+
+.animate-lp-blob-4 {
+  animation: lpBlobDrift4 24s ease-in-out infinite;
+  will-change: transform;
+}
+
+.animate-lp-spin-slow {
+  animation: lpSpinSlow 50s linear infinite;
+  will-change: transform;
+}
+
+.animate-lp-wave {
+  animation: lpWaveSway 18s ease-in-out infinite;
+  will-change: transform;
+}
+
+.animate-lp-float {
+  animation: lpFloatGentle 6s ease-in-out infinite;
+  will-change: transform;
+}
+
+.animate-lp-float-subtle {
+  animation: lpFloatSubtle 4.5s ease-in-out infinite;
+  will-change: transform;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-lp-blob-1,
+  .animate-lp-blob-2,
+  .animate-lp-blob-3,
+  .animate-lp-blob-4,
+  .animate-lp-spin-slow,
+  .animate-lp-wave,
+  .animate-lp-float,
+  .animate-lp-float-subtle,
+  .animate-welcome-enter,
+  .animate-welcome-exit,
+  .animate-sparkle-pulse,
+  .animate-overlay-in,
+  .animate-overlay-out,
+  .animate-overlay-art,
+  .animate-overlay-text,
+  .animate-overlay-line,
+  .animate-overlay-orb-1,
+  .animate-overlay-orb-2 {
+    animation: none !important;
+  }
+}
+
+/* Login Success Welcome Animation */
+@keyframes loginWelcomeEnter {
+  0% {
+    opacity: 0;
+    transform: translateY(-14px) scale(0.97);
+  }
+  60% {
+    opacity: 1;
+    transform: translateY(2px) scale(1.005);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes loginWelcomeExit {
+  0% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    max-height: 140px;
+    margin-bottom: 1.5rem;
+  }
+  40% {
+    opacity: 0.15;
+    transform: translateY(-6px) scale(0.98);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-12px) scale(0.96);
+    max-height: 0;
+    margin-bottom: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+  }
+}
+
+@keyframes sparkleGlowPulse {
+  0%, 100% {
+    opacity: 0.65;
+    transform: scale(0.92) rotate(0deg);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.12) rotate(12deg);
+  }
+}
+
+.animate-welcome-enter {
+  animation: loginWelcomeEnter 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-welcome-exit {
+  animation: loginWelcomeExit 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-sparkle-pulse {
+  animation: sparkleGlowPulse 2s ease-in-out infinite;
+}
+
+/* Full-Screen Login Success Welcome Overlay Keyframes */
+@keyframes overlayFadeIn {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+@keyframes overlayFadeOut {
+  0% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.02);
+  }
+}
+
+@keyframes overlayArtEnter {
+  0% {
+    opacity: 0;
+    transform: scale(0.9) translateY(14px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes overlayTextReveal {
+  0% {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes overlayLineExpand {
+  0% {
+    width: 0;
+    opacity: 0;
+  }
+  100% {
+    width: 8rem;
+    opacity: 1;
+  }
+}
+
+@keyframes overlayOrbFloat {
+  0%, 100% {
+    transform: translate(0, 0) scale(1);
+  }
+  50% {
+    transform: translate(18px, -18px) scale(1.08);
+  }
+}
+
+.animate-overlay-in {
+  animation: overlayFadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-overlay-out {
+  animation: overlayFadeOut 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-overlay-art {
+  animation: overlayArtEnter 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.1s both;
+}
+
+.animate-overlay-text {
+  animation: overlayTextReveal 0.65s cubic-bezier(0.16, 1, 0.3, 1) 0.25s both;
+}
+
+.animate-overlay-line {
+  animation: overlayLineExpand 0.65s ease-out 0.45s both;
+}
+
+.animate-overlay-orb-1 {
+  animation: overlayOrbFloat 8s ease-in-out infinite;
+}
+
+.animate-overlay-orb-2 {
+  animation: overlayOrbFloat 10s ease-in-out infinite reverse;
+}
+

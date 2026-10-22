@@ -34,6 +34,10 @@ import { LogPostModal } from './components/posts/LogPostModal';
 import { AddStaffModal } from './components/staff/AddStaffModal';
 import { SupabaseSetupModal } from './components/common/SupabaseSetupModal';
 import { WelcomeIntro } from './components/common/WelcomeIntro';
+import {
+  LoginWelcomeOverlay,
+  getWelcomeName,
+} from './components/common/LoginWelcomeOverlay';
 
 const MainApp: React.FC = () => {
   const { user, profile, loading: authLoading } = useAuth();
@@ -46,6 +50,7 @@ const MainApp: React.FC = () => {
   // Navigation
   const [currentModule, setCurrentModule] = useState<NavigationModule>('dashboard');
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+  const [loginWelcomeName, setLoginWelcomeName] = useState<string | null>(null);
   const [showWelcomeIntro, setShowWelcomeIntro] = useState(() => {
     try {
       return sessionStorage.getItem('lp_welcome_intro_shown') !== 'true';
@@ -141,6 +146,35 @@ const MainApp: React.FC = () => {
       }
     }
   }, [currentModule, currentRole]);
+
+  // Check for successful login welcome animation trigger
+  useEffect(() => {
+    if (!user) {
+      setLoginWelcomeName(null);
+      return;
+    }
+
+    try {
+      const pendingUserId = sessionStorage.getItem('lp_login_welcome_for');
+      if (pendingUserId === user.id) {
+        const storedRole = sessionStorage.getItem('lp_login_welcome_role');
+        const storedName = sessionStorage.getItem('lp_login_welcome_name');
+
+        // Immediately consume the flags so refresh, navigation or re-renders never replay
+        sessionStorage.removeItem('lp_login_welcome_for');
+        sessionStorage.removeItem('lp_login_welcome_role');
+        sessionStorage.removeItem('lp_login_welcome_name');
+
+        const effectiveRole = profile?.role || storedRole || currentRole || 'Admin';
+        const effectiveName = profile?.full_name || storedName || '';
+
+        const name = getWelcomeName(effectiveRole, effectiveName);
+        setLoginWelcomeName(name);
+      }
+    } catch {
+      // In case sessionStorage is unavailable
+    }
+  }, [user, profile, currentRole]);
 
   // If Auth is loading
   if (authLoading) {
@@ -369,6 +403,14 @@ const MainApp: React.FC = () => {
 
   return (
     <div className="flex min-h-screen bg-slate-50 text-[#111827] font-sans relative">
+      {/* Full-Screen Login Success Welcome Overlay */}
+      {loginWelcomeName && (
+        <LoginWelcomeOverlay
+          userName={loginWelcomeName}
+          onComplete={() => setLoginWelcomeName(null)}
+        />
+      )}
+
       {/* Sidebar (Desktop & Mobile Drawer) */}
       <Sidebar
         currentModule={currentModule}
