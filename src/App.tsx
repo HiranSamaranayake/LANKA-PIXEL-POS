@@ -33,6 +33,7 @@ import { AddExpenseModal } from './components/expenses/AddExpenseModal';
 import { LogPostModal } from './components/posts/LogPostModal';
 import { AddStaffModal } from './components/staff/AddStaffModal';
 import { SupabaseSetupModal } from './components/common/SupabaseSetupModal';
+import { WelcomeIntro } from './components/common/WelcomeIntro';
 
 const MainApp: React.FC = () => {
   const { user, profile, loading: authLoading } = useAuth();
@@ -45,6 +46,13 @@ const MainApp: React.FC = () => {
   // Navigation
   const [currentModule, setCurrentModule] = useState<NavigationModule>('dashboard');
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+  const [showWelcomeIntro, setShowWelcomeIntro] = useState(() => {
+    try {
+      return sessionStorage.getItem('lp_welcome_intro_shown') !== 'true';
+    } catch {
+      return false;
+    }
+  });
 
   // Supabase Data State
   const [incomes, setIncomes] = useState<IncomeRecord[]>([]);
@@ -155,7 +163,14 @@ const MainApp: React.FC = () => {
 
   // If User is not signed in, show Login Screen
   if (!user) {
-    return <LoginView />;
+    return (
+      <>
+        {showWelcomeIntro && (
+          <WelcomeIntro onComplete={() => setShowWelcomeIntro(false)} />
+        )}
+        <LoginView />
+      </>
+    );
   }
 
   // Filter designers list for post logging
