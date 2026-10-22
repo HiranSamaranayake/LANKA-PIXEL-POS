@@ -3,6 +3,7 @@ import { PlusCircle, Search, Edit2, Trash2, Calendar, FileText, User } from 'luc
 import type { DailyPostCount, UserProfile, UserRole } from '../../types';
 import { formatDate, getColomboToday, getCurrentMonthString } from '../../utils/formatters';
 import { useAuth } from '../../context/AuthContext';
+import { useNotification } from '../../context/NotificationContext';
 
 interface DailyPostCountViewProps {
   postCounts: DailyPostCount[];
@@ -22,6 +23,7 @@ export const DailyPostCountView: React.FC<DailyPostCountViewProps> = ({
   onDeletePost,
 }) => {
   const { user, profile } = useAuth();
+  const { confirmDelete, showSuccess, showError } = useNotification();
   const todayStr = getColomboToday();
   const currentMonthStr = getCurrentMonthString();
 
@@ -74,10 +76,23 @@ export const DailyPostCountView: React.FC<DailyPostCountViewProps> = ({
     return matchesDate && matchesDesigner && matchesSearch;
   });
 
-  const handleDelete = async (id: string) => {
-    if (window.confirm('Are you sure you want to delete this post count entry?')) {
-      await onDeletePost(id);
-    }
+  const handleDeleteClick = (item: DailyPostCount) => {
+    confirmDelete({
+      title: 'Delete Daily Post Count',
+      message: 'Are you sure you want to delete this daily post count entry? This action cannot be undone.',
+      itemName: `${item.designer_name} — ${item.completed_posts} Completed Posts`,
+      itemDetails: `Date: ${formatDate(item.date)}${item.notes ? ` • Note: ${item.notes}` : ''}`,
+      confirmText: 'Delete Entry',
+      onConfirm: async () => {
+        try {
+          await onDeletePost(item.id);
+          showSuccess('Post count record deleted successfully.');
+        } catch {
+          showError('Unable to delete post count entry. Please try again.');
+          throw new Error('Delete failed');
+        }
+      },
+    });
   };
 
   return (
@@ -268,7 +283,7 @@ export const DailyPostCountView: React.FC<DailyPostCountViewProps> = ({
                         </button>
                         {currentRole === 'Admin' && (
                           <button
-                            onClick={() => handleDelete(item.id)}
+                            onClick={() => handleDeleteClick(item)}
                             className="p-1 rounded text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
                             title="Delete Entry"
                           >

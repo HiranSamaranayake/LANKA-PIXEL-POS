@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { PlusCircle, Search, Edit2, Trash2, Calendar, FileText } from 'lucide-react';
 import type { IncomeRecord, UserRole } from '../../types';
 import { formatLKR, formatDate, getColomboToday, getCurrentMonthString } from '../../utils/formatters';
+import { useNotification } from '../../context/NotificationContext';
 
 interface IncomeViewProps {
   incomes: IncomeRecord[];
@@ -18,6 +19,7 @@ export const IncomeView: React.FC<IncomeViewProps> = ({
   onEditIncome,
   onDeleteIncome,
 }) => {
+  const { confirmDelete, showSuccess, showError } = useNotification();
   const todayStr = getColomboToday();
   const currentMonthStr = getCurrentMonthString();
 
@@ -44,10 +46,25 @@ export const IncomeView: React.FC<IncomeViewProps> = ({
     return matchesDate && matchesSearch;
   });
 
-  const handleDelete = async (id: string) => {
-    if (window.confirm('Are you sure you want to delete this income record?')) {
-      await onDeleteIncome(id);
-    }
+  const handleDeleteClick = (item: IncomeRecord) => {
+    confirmDelete({
+      title: 'Delete Income Record',
+      message: 'Are you sure you want to delete this income record? This action cannot be undone.',
+      itemName: `${item.source} (${formatLKR(item.amount)})`,
+      itemDetails: `Date: ${formatDate(item.date)} • Recorded by: ${item.recorded_by}${
+        item.client_project ? ` • Client: ${item.client_project}` : ''
+      }`,
+      confirmText: 'Delete Record',
+      onConfirm: async () => {
+        try {
+          await onDeleteIncome(item.id);
+          showSuccess('Income record deleted successfully.');
+        } catch {
+          showError('Unable to delete income record. Please check your connection and try again.');
+          throw new Error('Delete failed');
+        }
+      },
+    });
   };
 
   return (
@@ -205,7 +222,7 @@ export const IncomeView: React.FC<IncomeViewProps> = ({
                         </button>
                         {currentRole === 'Admin' && (
                           <button
-                            onClick={() => handleDelete(inc.id)}
+                            onClick={() => handleDeleteClick(inc)}
                             className="p-1 rounded text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
                             title="Delete Record"
                           >

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Users, PlusCircle, ShieldCheck, Headphones, Brush, UserX, UserCheck, Search } from 'lucide-react';
 import type { UserProfile, UserRole } from '../../types';
+import { useNotification } from '../../context/NotificationContext';
 
 interface StaffManagementViewProps {
   staffList: UserProfile[];
@@ -15,6 +16,7 @@ export const StaffManagementView: React.FC<StaffManagementViewProps> = ({
   onUpdateRole,
   onToggleStatus,
 }) => {
+  const { confirmDelete } = useNotification();
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState<string>('All');
 
@@ -25,6 +27,24 @@ export const StaffManagementView: React.FC<StaffManagementViewProps> = ({
       s.email.toLowerCase().includes(searchTerm.toLowerCase());
     return matchesRole && matchesSearch;
   });
+
+  const handleToggleClick = (staff: UserProfile) => {
+    if (staff.status === 'Active') {
+      confirmDelete({
+        title: 'Deactivate Staff Account',
+        message:
+          'Are you sure you want to deactivate this staff account? The user will no longer be able to log in to the portal.',
+        itemName: `${staff.full_name} (${staff.role})`,
+        itemDetails: `Work Email: ${staff.email}`,
+        confirmText: 'Deactivate Account',
+        onConfirm: async () => {
+          await onToggleStatus(staff.id, staff.status);
+        },
+      });
+    } else {
+      onToggleStatus(staff.id, staff.status);
+    }
+  };
 
   const adminCount = staffList.filter((s) => s.role === 'Admin').length;
   const operatorCount = staffList.filter((s) => s.role === 'Call Center Operator').length;
@@ -208,7 +228,7 @@ export const StaffManagementView: React.FC<StaffManagementViewProps> = ({
 
                         {/* Deactivate / Reactivate button */}
                         <button
-                          onClick={() => onToggleStatus(staff.id, staff.status)}
+                          onClick={() => handleToggleClick(staff)}
                           className={`inline-flex items-center gap-1 px-2.5 py-1 rounded border text-[11px] font-semibold transition-colors ${
                             staff.status === 'Active'
                               ? 'border-gray-200 text-gray-600 hover:text-red-700 hover:bg-red-50'

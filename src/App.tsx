@@ -10,6 +10,7 @@ import type {
 import { getColomboToday, getCurrentMonthString } from './utils/formatters';
 import { supabase, isSupabaseConfigured } from './lib/supabase';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { NotificationProvider, useNotification } from './context/NotificationContext';
 
 // Layout
 import { Sidebar } from './components/layout/Sidebar';
@@ -35,6 +36,7 @@ import { SupabaseSetupModal } from './components/common/SupabaseSetupModal';
 
 const MainApp: React.FC = () => {
   const { user, profile, loading: authLoading } = useAuth();
+  const { showSuccess, showError } = useNotification();
 
   const currentRole: UserRole = profile?.role || 'Admin';
   const todayStr = getColomboToday();
@@ -193,8 +195,12 @@ const MainApp: React.FC = () => {
   const handleDeleteIncome = async (id: string) => {
     if (supabase) {
       const { error } = await supabase.from('income_records').delete().eq('id', id);
-      if (error) alert(error.message);
-      else setIncomes((prev) => prev.filter((item) => item.id !== id));
+      if (error) {
+        showError(error.message || 'Unable to delete income record. Please try again.');
+        throw error;
+      } else {
+        setIncomes((prev) => prev.filter((item) => item.id !== id));
+      }
     }
   };
 
@@ -232,8 +238,12 @@ const MainApp: React.FC = () => {
   const handleDeleteExpense = async (id: string) => {
     if (supabase) {
       const { error } = await supabase.from('expense_records').delete().eq('id', id);
-      if (error) alert(error.message);
-      else setExpenses((prev) => prev.filter((item) => item.id !== id));
+      if (error) {
+        showError(error.message || 'Unable to delete expense record. Please try again.');
+        throw error;
+      } else {
+        setExpenses((prev) => prev.filter((item) => item.id !== id));
+      }
     }
   };
 
@@ -285,8 +295,12 @@ const MainApp: React.FC = () => {
   const handleDeletePost = async (id: string) => {
     if (supabase) {
       const { error } = await supabase.from('daily_post_counts').delete().eq('id', id);
-      if (error) alert(error.message);
-      else setPostCounts((prev) => prev.filter((item) => item.id !== id));
+      if (error) {
+        showError(error.message || 'Unable to delete post count entry. Please try again.');
+        throw error;
+      } else {
+        setPostCounts((prev) => prev.filter((item) => item.id !== id));
+      }
     }
   };
 
@@ -298,11 +312,13 @@ const MainApp: React.FC = () => {
         .update({ role: newRole, updated_at: new Date().toISOString() })
         .eq('id', id);
 
-      if (error) alert(error.message);
-      else {
+      if (error) {
+        showError(error.message || 'Unable to update staff role. Please try again.');
+      } else {
         setStaffList((prev) =>
           prev.map((s) => (s.id === id ? { ...s, role: newRole } : s))
         );
+        showSuccess(`Staff role updated to ${newRole} successfully.`);
       }
     }
   };
@@ -318,10 +334,19 @@ const MainApp: React.FC = () => {
         .update({ status: nextStatus, updated_at: new Date().toISOString() })
         .eq('id', id);
 
-      if (error) alert(error.message);
-      else {
+      if (error) {
+        showError(
+          error.message ||
+            `Unable to ${nextStatus === 'Active' ? 'reactivate' : 'deactivate'} staff account.`
+        );
+      } else {
         setStaffList((prev) =>
           prev.map((s) => (s.id === id ? { ...s, status: nextStatus } : s))
+        );
+        showSuccess(
+          nextStatus === 'Active'
+            ? 'Staff account reactivated successfully.'
+            : 'Staff account deactivated successfully.'
         );
       }
     }
@@ -427,6 +452,7 @@ const MainApp: React.FC = () => {
               incomes={incomes}
               expenses={expenses}
               postCounts={postCounts}
+              currentRole={currentRole}
             />
           )}
 
@@ -509,7 +535,9 @@ const MainApp: React.FC = () => {
 export const App: React.FC = () => {
   return (
     <AuthProvider>
-      <MainApp />
+      <NotificationProvider>
+        <MainApp />
+      </NotificationProvider>
     </AuthProvider>
   );
 };

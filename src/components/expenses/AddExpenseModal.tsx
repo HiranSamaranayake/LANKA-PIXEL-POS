@@ -3,6 +3,7 @@ import { X } from 'lucide-react';
 import type { ExpenseCategory, ExpenseRecord } from '../../types';
 import { getColomboToday } from '../../utils/formatters';
 import { useAuth } from '../../context/AuthContext';
+import { useNotification } from '../../context/NotificationContext';
 
 interface AddExpenseModalProps {
   isOpen: boolean;
@@ -33,6 +34,7 @@ export const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
   onUpdateExpense,
 }) => {
   const { profile } = useAuth();
+  const { showSuccess, showError } = useNotification();
 
   const [date, setDate] = useState(editingRecord ? editingRecord.date : getColomboToday());
   const [category, setCategory] = useState<ExpenseCategory>(
@@ -93,9 +95,16 @@ export const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
           recorded_by: profile?.full_name || 'Staff Member',
         });
       }
+      showSuccess(
+        editingRecord
+          ? 'Expense record updated successfully.'
+          : 'Expense record saved successfully.'
+      );
       onClose();
     } catch (err: unknown) {
-      setErrorMsg(err instanceof Error ? err.message : 'Failed to save expense');
+      const msg = err instanceof Error ? err.message : 'Failed to save expense';
+      setErrorMsg(msg);
+      showError(msg);
     } finally {
       setSaving(false);
     }

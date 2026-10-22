@@ -3,6 +3,7 @@ import { PlusCircle, Search, Edit2, Trash2, Calendar, TrendingDown } from 'lucid
 import type { ExpenseRecord, UserRole } from '../../types';
 import { EXPENSE_CATEGORIES } from './AddExpenseModal';
 import { formatLKR, formatDate, getColomboToday, getCurrentMonthString } from '../../utils/formatters';
+import { useNotification } from '../../context/NotificationContext';
 
 interface ExpensesViewProps {
   expenses: ExpenseRecord[];
@@ -19,6 +20,7 @@ export const ExpensesView: React.FC<ExpensesViewProps> = ({
   onEditExpense,
   onDeleteExpense,
 }) => {
+  const { confirmDelete, showSuccess, showError } = useNotification();
   const todayStr = getColomboToday();
   const currentMonthStr = getCurrentMonthString();
 
@@ -47,10 +49,23 @@ export const ExpensesView: React.FC<ExpensesViewProps> = ({
     return matchesDate && matchesCat && matchesSearch;
   });
 
-  const handleDelete = async (id: string) => {
-    if (window.confirm('Are you sure you want to delete this expense record?')) {
-      await onDeleteExpense(id);
-    }
+  const handleDeleteClick = (item: ExpenseRecord) => {
+    confirmDelete({
+      title: 'Delete Expense Record',
+      message: 'Are you sure you want to delete this expense record? This action cannot be undone.',
+      itemName: `${item.description} (${formatLKR(item.amount)})`,
+      itemDetails: `Category: ${item.category} • Date: ${formatDate(item.date)} • Recorded by: ${item.recorded_by}`,
+      confirmText: 'Delete Record',
+      onConfirm: async () => {
+        try {
+          await onDeleteExpense(item.id);
+          showSuccess('Expense record deleted successfully.');
+        } catch {
+          showError('Unable to delete expense record. Please check your connection and try again.');
+          throw new Error('Delete failed');
+        }
+      },
+    });
   };
 
   return (
@@ -220,7 +235,7 @@ export const ExpensesView: React.FC<ExpensesViewProps> = ({
                         </button>
                         {currentRole === 'Admin' && (
                           <button
-                            onClick={() => handleDelete(exp.id)}
+                            onClick={() => handleDeleteClick(exp)}
                             className="p-1 rounded text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
                             title="Delete Expense"
                           >

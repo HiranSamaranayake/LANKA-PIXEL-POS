@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Building2, Lock, CheckCircle2, AlertCircle } from 'lucide-react';
 import type { UserRole } from '../../types';
 import { useAuth } from '../../context/AuthContext';
+import { useNotification } from '../../context/NotificationContext';
 import { supabase } from '../../lib/supabase';
 
 interface SettingsViewProps {
@@ -11,6 +12,7 @@ interface SettingsViewProps {
 
 export const SettingsView: React.FC<SettingsViewProps> = ({ currentRole }) => {
   const { profile, user } = useAuth();
+  const { showSuccess, showError } = useNotification();
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [passwordLoading, setPasswordLoading] = useState(false);
@@ -40,13 +42,17 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ currentRole }) => {
       const { error } = await supabase.auth.updateUser({ password: newPassword });
       if (error) {
         setPasswordMsg({ type: 'error', text: error.message });
+        showError(error.message);
       } else {
         setPasswordMsg({ type: 'success', text: 'Your account password has been updated successfully.' });
+        showSuccess('Your account password has been updated successfully.');
         setNewPassword('');
         setConfirmPassword('');
       }
     } catch (err: unknown) {
-      setPasswordMsg({ type: 'error', text: err instanceof Error ? err.message : 'Password update failed' });
+      const msg = err instanceof Error ? err.message : 'Password update failed';
+      setPasswordMsg({ type: 'error', text: msg });
+      showError(msg);
     } finally {
       setPasswordLoading(false);
     }

@@ -3,6 +3,7 @@ import { X } from 'lucide-react';
 import type { DailyPostCount, UserProfile, UserRole } from '../../types';
 import { getColomboToday } from '../../utils/formatters';
 import { useAuth } from '../../context/AuthContext';
+import { useNotification } from '../../context/NotificationContext';
 
 interface LogPostModalProps {
   isOpen: boolean;
@@ -24,6 +25,7 @@ export const LogPostModal: React.FC<LogPostModalProps> = ({
   onUpdatePost,
 }) => {
   const { user, profile } = useAuth();
+  const { showSuccess, showError } = useNotification();
 
   const [date, setDate] = useState(editingRecord ? editingRecord.date : getColomboToday());
   const [designerId, setDesignerId] = useState(
@@ -105,9 +107,16 @@ export const LogPostModal: React.FC<LogPostModalProps> = ({
           notes: notes.trim() || undefined,
         });
       }
+      showSuccess(
+        editingRecord
+          ? 'Daily post count updated successfully.'
+          : 'Daily post count saved successfully.'
+      );
       onClose();
     } catch (err: unknown) {
-      setErrorMsg(err instanceof Error ? err.message : 'Failed to save daily post count');
+      const msg = err instanceof Error ? err.message : 'Failed to save daily post count';
+      setErrorMsg(msg);
+      showError(msg);
     } finally {
       setSaving(false);
     }

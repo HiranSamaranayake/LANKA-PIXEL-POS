@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { X, Lock, Eye, EyeOff } from 'lucide-react';
 import type { UserRole } from '../../types';
 import { useAuth } from '../../context/AuthContext';
+import { useNotification } from '../../context/NotificationContext';
 
 interface AddStaffModalProps {
   isOpen: boolean;
@@ -15,6 +16,7 @@ export const AddStaffModal: React.FC<AddStaffModalProps> = ({
   onStaffAdded,
 }) => {
   const { createStaffAccount } = useAuth();
+  const { showSuccess, showError } = useNotification();
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [role, setRole] = useState<UserRole>('Designer');
@@ -45,8 +47,11 @@ export const AddStaffModal: React.FC<AddStaffModalProps> = ({
 
     if (error) {
       setErrorMsg(error);
+      showError(error);
     } else {
+      const createdName = fullName.trim();
       await onStaffAdded();
+      showSuccess(`Staff account created successfully for ${createdName}.`);
       setFullName('');
       setEmail('');
       setPassword('');

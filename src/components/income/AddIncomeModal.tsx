@@ -3,6 +3,7 @@ import { X } from 'lucide-react';
 import type { IncomeRecord } from '../../types';
 import { getColomboToday } from '../../utils/formatters';
 import { useAuth } from '../../context/AuthContext';
+import { useNotification } from '../../context/NotificationContext';
 
 interface AddIncomeModalProps {
   isOpen: boolean;
@@ -20,6 +21,7 @@ export const AddIncomeModal: React.FC<AddIncomeModalProps> = ({
   onUpdateIncome,
 }) => {
   const { profile } = useAuth();
+  const { showSuccess, showError } = useNotification();
   const [date, setDate] = useState(editingRecord ? editingRecord.date : getColomboToday());
   const [source, setSource] = useState(editingRecord ? editingRecord.source : 'Social Media Design Package');
   const [clientProject, setClientProject] = useState(editingRecord?.client_project || '');
@@ -78,9 +80,16 @@ export const AddIncomeModal: React.FC<AddIncomeModalProps> = ({
           recorded_by: profile?.full_name || 'Staff Member',
         });
       }
+      showSuccess(
+        editingRecord
+          ? 'Income record updated successfully.'
+          : 'Income record saved successfully.'
+      );
       onClose();
     } catch (err: unknown) {
-      setErrorMsg(err instanceof Error ? err.message : 'Failed to save income record');
+      const msg = err instanceof Error ? err.message : 'Failed to save income record';
+      setErrorMsg(msg);
+      showError(msg);
     } finally {
       setSaving(false);
     }
